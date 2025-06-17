@@ -193,11 +193,9 @@ def onAppExit(caller=None, event=None):
 
     print("Slicer is closing. Saving all markups...")
 
-    # Retrieve final list of markups in scene
     final_markup_nodes = slicer.util.getNodesByClass('vtkMRMLMarkupsNode')
-    final_node_names = [node.GetName() for node in final_markup_nodes]
 
-    # Load existing markup log file
+    # Load existing markup log
     markup_log = {}
     if os.path.exists(markup_log_file):
         with open(markup_log_file, 'r') as log:
@@ -209,26 +207,49 @@ def onAppExit(caller=None, event=None):
                         'content': parts[2],
                         'deleted_at': parts[3]
                     }
+    # Get the last appended number if markup_log has any entries
+    if len(markup_log) != 0:
+        max_number = 0
+        for markup in markup_log:
+            try:
+                number_part = int(markup.replace(".json", "").split("_")[-1])
+                if number_part > max_number:
+                    max_number = number_part
+            except ValueError:
+                # Skip if filename doesn't end with a number
+                continue
+    else:
+        max_number = 0
 
     now_str = datetime.datetime.now().isoformat()
     current_filenames = set()
 
     for markupNode in final_markup_nodes:
-        node_name = markupNode.GetName()
-        # Construct safe filename for each markup
-        if "_vtkMRMLMarkups" not in node_name:
-            safe_name = f"{node_name}_{markupNode.GetID()}".replace(" ", "_") + ".json"
+        node_name = markupNode.GetName().replace(" ", "_")
+
+        # Check if this markup has already been saved by looking for filenames starting with node_name_
+        existing_file = None
+        for fname in markup_log.keys():
+            if fname == node_name+".json":
+                existing_file = fname
+                break
+
+        if existing_file:
+            safe_name = existing_file
         else:
-            safe_name = f"{node_name}".replace(" ", "_") + ".json"
+            max_number += 1
+            node_id = markupNode.GetID()
+            base_name = f"{node_name}_{node_id}".replace(" ", "_")
+            safe_name = f"{base_name}_{max_number}.json"
+
         output_path = os.path.join(sourceFolder, safe_name)
         current_filenames.add(safe_name)
 
         try:
             markupNode.Modified()
             if slicer.util.saveNode(markupNode, output_path):
-                print(f"Saved markup: {output_path}")
+                print(f"Saved markup:{output_path}")
 
-                # Read saved JSON content, format for CSV logging
                 with open(output_path, 'r') as f:
                     content = json.dumps(json.load(f)).replace("\n", "").replace(",", ";")
 
@@ -241,13 +262,14 @@ def onAppExit(caller=None, event=None):
                 else:
                     markup_log[safe_name]['content'] = content
                     markup_log[safe_name]['deleted_at'] = ""
+
             else:
                 print(f"Failed to save markup: {node_name}")
 
         except Exception as e:
             print(f"Error saving markup {node_name}: {e}")
 
-    # Detect and remove any deleted files
+    # Detect deleted markups (present in log but no longer in scene)
     saved_filenames = set(markup_log.keys())
     deleted_files = saved_filenames - current_filenames
 
@@ -262,13 +284,13 @@ def onAppExit(caller=None, event=None):
         except Exception as e:
             print(f"Failed to delete {deleted_file}: {e}")
 
-    # Save updated markup log file
+    # Save updated markup log
     with open(markup_log_file, 'w') as log:
         log.write("filename,created_at,content,deleted_at\n")
         for fname, data in markup_log.items():
             log.write(f"{fname},{data['created_at']},\"{data['content']}\",{data['deleted_at']}\n")
 
-    # Update main log CSV to indicate completion status
+    # Update report log
     log_csv = os.path.abspath(args.log_csv)
     temp_csv = log_csv + ".tmp"
     report_number = args.report_number
