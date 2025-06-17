@@ -28,7 +28,7 @@ if not os.path.exists(markup_log_file):
     with open(markup_log_file, 'w') as log:
         log.write("filename,created_at,content,deleted_at\n")
 
-# --- Set default style as Light
+# --- Set default style as Light ---
 slicer.app.setStyle("Light Slicer")
 
 # --- Function to load NIfTI and markup files into Slicer ---
@@ -57,6 +57,19 @@ def loadEverything():
 
     slicer.util.selectModule('Data')
     print("Ready for annotation.")
+
+# --- Set 3D slice visibility on the fourth viewer ---
+# Get all slice composite nodes (which control slice visibility in 3D)
+scene = slicer.mrmlScene
+sliceNodes = scene.GetNodesByClass("vtkMRMLSliceNode")
+
+# Toggle visibility for each slice in 3D view
+sliceNodes.InitTraversal()
+for i in range(sliceNodes.GetNumberOfItems()):
+    sliceNode = sliceNodes.GetItemAsObject(i)
+    sliceNode.SetSliceVisible(True)
+    # currentVisibility = sliceNode.GetSliceVisible()
+    # sliceNode.SetSliceVisible(not currentVisibility)  # Toggle: 1 → 0, 0 → 1
 
 # --- Global references for UI components ---
 moduleDropdown = None
