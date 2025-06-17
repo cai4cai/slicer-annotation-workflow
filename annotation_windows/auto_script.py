@@ -357,8 +357,32 @@ def hideAllGUIComponents():
     if dataProbeWidget:
         dataProbeWidget.setVisible(False)
 
+# --- Ensure that anatomical coordinates are used
+def setAnatomicalSliceViews():
+    layoutManager = slicer.app.layoutManager()
+    sliceViewOrientations = {
+        "Red": "Axial",
+        "Yellow": "Sagittal",
+        "Green": "Coronal"
+    }
+
+    for sliceName, orientation in sliceViewOrientations.items():
+        try:
+            sliceWidget = layoutManager.sliceWidget(sliceName)
+            if not sliceWidget:
+                print(f"[Slice Orientation] Slice widget '{sliceName}' not found.")
+                continue
+            sliceNode = sliceWidget.sliceLogic().GetSliceNode()
+            sliceNode.SetOrientation(orientation)
+            sliceNode.SetSliceVisible(True)
+            print(f"[Slice Orientation] Set {sliceName} to {orientation}")
+        except Exception as e:
+            print(f"[Slice Orientation] Failed to set {sliceName} to {orientation}: {e}")
+
+
 # --- Bind exit event and initialise app ---
 slicer.app.connect("aboutToQuit()", onAppExit)
 QTimer.singleShot(100, hideAllGUIComponents)
 QTimer.singleShot(200, loadEverything)
 QTimer.singleShot(300, initialiseCustomUI)
+QTimer.singleShot(400, setAnatomicalSliceViews)
