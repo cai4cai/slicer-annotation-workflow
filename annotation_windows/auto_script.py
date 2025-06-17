@@ -28,6 +28,9 @@ if not os.path.exists(markup_log_file):
     with open(markup_log_file, 'w') as log:
         log.write("filename,created_at,content,deleted_at\n")
 
+# --- Set default style as Light
+slicer.app.setStyle("Light Slicer")
+
 # --- Function to load NIfTI and markup files into Slicer ---
 def loadEverything():
     if nifti_files:
