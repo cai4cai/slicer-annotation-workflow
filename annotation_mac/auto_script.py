@@ -81,7 +81,7 @@ def addAllowedModuleDropdown(moduleToolBar, allowedModules=None):
     if moduleToolBar is None:
         return
     if allowedModules is None:
-        allowedModules = ['Data', 'Markups']
+        allowedModules = ['Data', 'Markups', 'Volumes']
 
     moduleDropdown = qt.QComboBox(moduleToolBar)
     moduleDropdown.addItems(allowedModules)
@@ -98,20 +98,75 @@ def addAllowedModuleDropdown(moduleToolBar, allowedModules=None):
     print(f"Available modules now: {allowedModules}")
     return moduleDropdown
 
-# --- Create a custom toolbar in the main Slicer window ---
+# --- Initialise custom UI including favourites and dropdown ---
 def initialiseCustomUI():
     global customToolBar
     mw = slicer.util.mainWindow()
     if not mw:
-        print("Main window not found, cannot create toolbar")
+        print("Main window not found, cannot initialise UI")
         return
 
+    # Set favourites modules list
+    favourites = ['Data', 'Markups', 'Volumes']
+    settings = slicer.app.settings()
+    settings.setValue('Modules/FavoriteModules', favourites)
+
+    # Show the existing Favourites toolbar if present
+    favToolbar = mw.findChild(qt.QToolBar, "ModulesToolBar")
+    if favToolbar:
+        favToolbar.setVisible(True)
+        print("Favourites toolbar shown.")
+    else:
+        print("Could not find Favourites toolbar.")
+
+    # Create custom toolbar with dropdown next to it
     customToolBar = qt.QToolBar("CustomModuleToolbar", mw)
     mw.addToolBar(customToolBar)
 
-    addAllowedModuleDropdown(customToolBar, ['Data', 'Markups'])
+    # Add dropdown with the favourite modules
+    addAllowedModuleDropdown(customToolBar, favourites)
+
     customToolBar.show()
     print("Custom module dropdown added.")
+
+# # function below shows custom buttons
+# def initialiseCustomUI():
+#     global customToolBar
+#     mw = slicer.util.mainWindow()
+#     if not mw:
+#         print("Main window not found, cannot create toolbar")
+#         return
+
+#     customToolBar = qt.QToolBar("CustomModuleToolbar", mw)
+#     mw.addToolBar(customToolBar)
+
+#     # Add module dropdown
+#     addAllowedModuleDropdown(customToolBar, ['Data', 'Markups', 'Volumes'])
+
+#     # Function to create a module button with icon and tooltip
+#     def createModuleButton(moduleName, iconName):
+#         button = qt.QToolButton()
+#         button.setIcon(slicer.app.style().standardIcon(getattr(qt.QStyle, iconName)))
+#         button.setToolTip(f"Open {moduleName} module")
+
+#         def onClick():
+#             slicer.util.selectModule(moduleName)
+#             print(f"Switched to module: {moduleName}")
+
+#         button.clicked.connect(onClick)
+#         return button
+
+#     # Add module icon-buttons to the toolbar
+#     dataButton = createModuleButton("Data", "SP_DirOpenIcon")
+#     markupsButton = createModuleButton("Markups", "SP_FileDialogContentsView")
+#     volumesButton = createModuleButton("Volumes", "SP_FileDialogDetailedView")
+
+#     customToolBar.addWidget(dataButton)
+#     customToolBar.addWidget(markupsButton)
+#     customToolBar.addWidget(volumesButton)
+
+#     customToolBar.show()
+#     print("Custom module dropdown and icons added.")
 
 # --- Clean up custom UI elements on exit ---
 def cleanUpCustomUI():
@@ -301,8 +356,6 @@ def hideAllGUIComponents():
     dataProbeWidget = findChild(mw, "DataProbeCollapsibleWidget")
     if dataProbeWidget:
         dataProbeWidget.setVisible(False)
-
-
 
 # --- Bind exit event and initialise app ---
 slicer.app.connect("aboutToQuit()", onAppExit)
