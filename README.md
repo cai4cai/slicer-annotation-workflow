@@ -26,4 +26,4 @@ After annotating each case:
 - Open the `log.csv` file located in your fold’s directory.
 - Update the **Done** column for each completed case.
 
-Once all annotations are finished, compress your fold folder into a `.zip` file, upload it to OneDrive, and share the link with the project lead.
+You can find more details about the instructions and videos in [OneDrive folder](https://emckclac-my.sharepoint.com/:f:/g/personal/k23049667_kcl_ac_uk/Ei5hzQrk8yhEksQblKg8FAkBSNba7ot8JC8LkvulSl-nWg?e=TPpxQk)
