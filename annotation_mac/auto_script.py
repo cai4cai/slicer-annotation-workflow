@@ -106,16 +106,23 @@ def initialiseCustomUI():
         print("Main window not found, cannot initialise UI")
         return
 
-    # Set favourites modules list
+    # Define favourites list
     favourites = ['Data', 'Markups', 'Volumes']
     settings = slicer.app.settings()
     settings.setValue('Modules/FavoriteModules', favourites)
 
-    # Show the existing Favourites toolbar if present
+    # Get existing Modules toolbar
     favToolbar = mw.findChild(qt.QToolBar, "ModulesToolBar")
     if favToolbar:
+        favToolbar.clear()
+
+        for moduleName in favourites:
+            action = qt.QAction(moduleName, favToolbar)
+            action.connect("triggered()", lambda checked=False, mn=moduleName: slicer.util.selectModule(mn))
+            favToolbar.addAction(action)
+
         favToolbar.setVisible(True)
-        print("Favourites toolbar shown.")
+        print("Favourites toolbar updated and shown.")
     else:
         print("Could not find Favourites toolbar.")
 
