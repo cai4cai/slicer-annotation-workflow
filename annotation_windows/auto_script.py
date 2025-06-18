@@ -409,9 +409,47 @@ def setAnatomicalSliceViews():
             print(f"[Slice Orientation] Failed to set {sliceName} to {orientation}: {e}")
 
 
+def show_report_dock(report_file_path, report_number):
+    mw = slicer.util.mainWindow()
+
+    existingDock = mw.findChild(qt.QDockWidget, "ReportDock")
+    if existingDock:
+        existingDock.close()
+        mw.removeDockWidget(existingDock)
+
+    dockWidget = qt.QDockWidget()
+    dockWidget.objectName = "ReportDock"
+    dockWidget.windowTitle = f"Report: {report_number}"
+
+    dockContents = qt.QWidget()
+    dockLayout = qt.QVBoxLayout(dockContents)
+
+    label = qt.QLabel(f"Report for {report_number}")
+    label.setStyleSheet("font-weight: bold; font-size: 16px; margin-bottom: 10px;")
+    dockLayout.addWidget(label)
+
+    textBrowser = qt.QTextBrowser()
+    textBrowser.setReadOnly(True)
+    textBrowser.setStyleSheet("background-color: #f0f0f0; font-size:14px")
+
+    if os.path.exists(report_file_path):
+        with open(report_file_path, 'r') as f:
+            textBrowser.setPlainText(f.read())
+    else:
+        textBrowser.setPlainText(f"Report file not found: {report_file_path}")
+
+    dockLayout.addWidget(textBrowser)
+
+    dockWidget.setWidget(dockContents)
+    mw.addDockWidget(qt.Qt.RightDockWidgetArea, dockWidget)
+    dockWidget.show()
+
+report_file_path = os.path.join(args.source_folder, f"report_{args.report_number}.txt")
+
 # --- Bind exit event and initialise app ---
 slicer.app.connect("aboutToQuit()", onAppExit)
 QTimer.singleShot(100, hideAllGUIComponents)
 QTimer.singleShot(200, loadEverything)
 QTimer.singleShot(300, initialiseCustomUI)
 QTimer.singleShot(400, setAnatomicalSliceViews)
+QTimer.singleShot(500, lambda: show_report_dock(report_file_path, args.report_number))
