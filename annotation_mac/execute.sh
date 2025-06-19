@@ -42,16 +42,16 @@ NIFTI_FILES=$(find "$SESSION_FOLDER" -maxdepth 1 -type f \( -iname "*.nii" -o -i
 MARKUP_FILES=$(find "$SESSION_FOLDER" -maxdepth 1 -type f -iname "*.json" | tr '\n' ' ')
 TEXT_FILE=$(find "$SESSION_FOLDER" -maxdepth 1 -type f -iname "*.txt" | head -n 1)
 
-# Open text report if present
-if [ -n "$TEXT_FILE" ]; then
-    if [ "$OS_TYPE" == "Darwin" ]; then
-        open "$TEXT_FILE" &
-    else
-        xdg-open "$TEXT_FILE" &
-    fi
-else
-    echo "No text report found in $SESSION_FOLDER"
-fi
+# # Open text report if present
+# if [ -n "$TEXT_FILE" ]; then
+#     if [ "$OS_TYPE" == "Darwin" ]; then
+#         open "$TEXT_FILE" &
+#     else
+#         xdg-open "$TEXT_FILE" &
+#     fi
+# else
+#     echo "No text report found in $SESSION_FOLDER"
+# fi
 
 # Print arguments parse later
 # echo "Launching Slicer with the following parameters:"

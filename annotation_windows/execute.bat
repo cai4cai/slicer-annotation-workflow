@@ -17,13 +17,19 @@ if not exist "%CSV_FILE%" (
     exit /b 1
 )
 
-:: Find session folder for the report number
+set "TEMP_CSV=%TEMP%\temp_log.csv"
+copy /y "%CSV_FILE%" "%TEMP_CSV%" >nul
+
+:: Now read from the copy
 set "SESSION_FOLDER="
-for /f "tokens=1,2 delims=," %%A in (%CSV_FILE%) do (
+for /f "tokens=1,2 delims=," %%A in (%TEMP_CSV%) do (
     if "%%A"=="%REPORT_NUMBER%" (
         set "SESSION_FOLDER=%%B"
     )
 )
+
+:: Delete the temporary copy
+del "%TEMP_CSV%"
 
 if "%SESSION_FOLDER%"=="" (
     echo No path found for report number %REPORT_NUMBER% in %CSV_FILE%.
@@ -59,11 +65,11 @@ for %%F in ("%SESSION_FOLDER%\*.txt") do (
 :found_text
 
 :: Open text report if present
-if not "%TEXT_FILE%"=="" (
-    start "" notepad.exe "%TEXT_FILE%"
-) else (
-    echo No text report found in %SESSION_FOLDER%
-)
+:: if not "%TEXT_FILE%"=="" (
+::     start "" notepad.exe "%TEXT_FILE%"
+:: ) else (
+::     echo No text report found in %SESSION_FOLDER%
+:: )
 
 :: Launch Slicer with auto_script.py and parameters
 "%SLICER_EXECUTABLE%" --python-script "%SCRIPT_DIR%auto_script.py" -- ^
