@@ -7,6 +7,12 @@ from qt import QTimer
 import datetime
 import json
 
+# --- Configure application settings ---
+settings = slicer.app.settings()
+settings.setValue("SubjectHierarchy/ResetFieldOfViewOnShowVolume", False)
+settings.setValue("SubjectHierarchy/ResetViewOrientationOnShowVolume", False)
+
+
 # --- Parse command line arguments from Slicer ---
 parser = argparse.ArgumentParser()
 parser.add_argument('--source_folder', required=True)  # Source directory for data
@@ -57,6 +63,8 @@ def loadEverything():
 
     slicer.util.selectModule('Data')
     print("Ready for annotation.")
+
+    setAnatomicalSliceViews()
 
 # --- Set 3D slice visibility on the fourth viewer ---
 # Get all slice composite nodes (which control slice visibility in 3D)
@@ -386,7 +394,7 @@ def hideAllGUIComponents():
     if dataProbeWidget:
         dataProbeWidget.setVisible(False)
 
-# --- Ensure that anatomical coordinates are used
+# --- Ensure that anatomical coordinates are used ---
 def setAnatomicalSliceViews():
     layoutManager = slicer.app.layoutManager()
     sliceViewOrientations = {
@@ -408,7 +416,7 @@ def setAnatomicalSliceViews():
         except Exception as e:
             print(f"[Slice Orientation] Failed to set {sliceName} to {orientation}: {e}")
 
-
+# --- Custom widget to display report on the right ---
 def show_report_dock(report_file_path, report_number):
     mw = slicer.util.mainWindow()
 
@@ -451,5 +459,4 @@ slicer.app.connect("aboutToQuit()", onAppExit)
 QTimer.singleShot(100, hideAllGUIComponents)
 QTimer.singleShot(200, loadEverything)
 QTimer.singleShot(300, initialiseCustomUI)
-QTimer.singleShot(400, setAnatomicalSliceViews)
-QTimer.singleShot(500, lambda: show_report_dock(report_file_path, args.report_number))
+QTimer.singleShot(400, lambda: show_report_dock(report_file_path, args.report_number))
