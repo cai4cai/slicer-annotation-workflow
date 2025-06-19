@@ -456,7 +456,7 @@ report_file_path = os.path.join(args.source_folder, f"report_{args.report_number
 
 # --- Bind exit event and initialise app ---
 slicer.app.connect("aboutToQuit()", onAppExit)
-QTimer.singleShot(100, hideAllGUIComponents)
-QTimer.singleShot(200, loadEverything)
-QTimer.singleShot(300, initialiseCustomUI)
-QTimer.singleShot(400, lambda: show_report_dock(report_file_path, args.report_number))
+QTimer.singleShot(50, hideAllGUIComponents)
+QTimer.singleShot(100, loadEverything)
+QTimer.singleShot(150, initialiseCustomUI)
+QTimer.singleShot(200, lambda: show_report_dock(report_file_path, args.report_number))
