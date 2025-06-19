@@ -64,21 +64,16 @@ for %%F in ("%SESSION_FOLDER%\*.txt") do (
 )
 :found_text
 
-:: Open text report if present
-:: if not "%TEXT_FILE%"=="" (
-::     start "" notepad.exe "%TEXT_FILE%"
-:: ) else (
-::     echo No text report found in %SESSION_FOLDER%
-:: )
+:: Module ignore list to match Bash
+set "IGNORE_MODULES=Annotations,Models,Transforms,Editor"
 
-:: Launch Slicer with auto_script.py and parameters
-"%SLICER_EXECUTABLE%" --python-script "%SCRIPT_DIR%auto_script.py" -- ^
+:: Launch Slicer with auto_script.py and parameters including module ignore
+"%SLICER_EXECUTABLE%" --modules-to-ignore "%IGNORE_MODULES%" --python-script "%SCRIPT_DIR%auto_script.py" -- ^
     --source_folder "%SESSION_FOLDER%" ^
     --nifti_files %NIFTI_FILES% ^
     --markup_files %MARKUP_FILES% ^
     --report_number "%REPORT_NUMBER%" ^
     --log_csv "%CSV_FILE%"
 
-:: Close after slicer exits
 echo Annotation session closed for %SESSION_FOLDER%
 exit /b 0

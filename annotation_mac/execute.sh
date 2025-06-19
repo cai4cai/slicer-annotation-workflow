@@ -42,17 +42,6 @@ NIFTI_FILES=$(find "$SESSION_FOLDER" -maxdepth 1 -type f \( -iname "*.nii" -o -i
 MARKUP_FILES=$(find "$SESSION_FOLDER" -maxdepth 1 -type f -iname "*.json" | tr '\n' ' ')
 TEXT_FILE=$(find "$SESSION_FOLDER" -maxdepth 1 -type f -iname "*.txt" | head -n 1)
 
-# # Open text report if present
-# if [ -n "$TEXT_FILE" ]; then
-#     if [ "$OS_TYPE" == "Darwin" ]; then
-#         open "$TEXT_FILE" &
-#     else
-#         xdg-open "$TEXT_FILE" &
-#     fi
-# else
-#     echo "No text report found in $SESSION_FOLDER"
-# fi
-
 # Print arguments parse later
 # echo "Launching Slicer with the following parameters:"
 # echo "SLICER_EXECUTABLE: $SLICER_EXECUTABLE"
@@ -63,18 +52,16 @@ TEXT_FILE=$(find "$SESSION_FOLDER" -maxdepth 1 -type f -iname "*.txt" | head -n 
 # echo "report_number: $REPORT_NUMBER"
 # echo "log_csv: $CSV_FILE"
 
+# "$SLICER_EXECUTABLE" --disable-modules=All --enable-modules=Data,Markups,Volumes --help
 # Launch Slicer with auto_script.py and parameters
-"$SLICER_EXECUTABLE" --python-script "$SCRIPT_DIR/auto_script.py" -- \
+IGNORE_MODULES="Annotations,Models,Transforms,Editor"
+
+"$SLICER_EXECUTABLE" --modules-to-ignore "$IGNORE_MODULES" --python-script "$SCRIPT_DIR/auto_script.py" -- \
     --source_folder "$SESSION_FOLDER" \
     --nifti_files $NIFTI_FILES \
     --markup_files $MARKUP_FILES \
     --report_number "$REPORT_NUMBER" \
     --log_csv "$CSV_FILE"
-
-# After Slicer exits, close the text viewer if it was opened
-if [ -n "$TEXT_VIEWER_PID" ]; then
-    kill "$TEXT_VIEWER_PID" 2>/dev/null
-fi
 
 echo "Annotation session closed for $SESSION_FOLDER"
 exit 0

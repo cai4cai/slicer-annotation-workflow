@@ -116,23 +116,23 @@ def initialiseCustomUI():
 
     # Define favourites list
     favourites = ['Data', 'Markups', 'Volumes']
-    settings = slicer.app.settings()
-    settings.setValue('Modules/FavoriteModules', favourites)
+    # settings = slicer.app.settings()
+    # settings.setValue('Modules/FavoriteModules', favourites)
 
-    # Get existing Modules toolbar
-    favToolbar = mw.findChild(qt.QToolBar, "ModulesToolBar")
-    if favToolbar:
-        favToolbar.clear()
+    # # Get existing Modules toolbar
+    # favToolbar = mw.findChild(qt.QToolBar, "ModulesToolBar")
+    # if favToolbar:
+    #     favToolbar.clear()
 
-        for moduleName in favourites:
-            action = qt.QAction(moduleName, favToolbar)
-            action.connect("triggered()", lambda checked=False, mn=moduleName: slicer.util.selectModule(mn))
-            favToolbar.addAction(action)
+    #     for moduleName in favourites:
+    #         action = qt.QAction(moduleName, favToolbar)
+    #         action.connect("triggered()", lambda checked=False, mn=moduleName: slicer.util.selectModule(mn))
+    #         favToolbar.addAction(action)
 
-        favToolbar.setVisible(True)
-        print("Favourites toolbar updated and shown.")
-    else:
-        print("Could not find Favourites toolbar.")
+    #     favToolbar.setVisible(True)
+    #     print("Favourites toolbar updated and shown.")
+    # else:
+    #     print("Could not find Favourites toolbar.")
 
     # Create custom toolbar with dropdown next to it
     customToolBar = qt.QToolBar("CustomModuleToolbar", mw)
