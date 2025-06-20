@@ -248,67 +248,63 @@ def cleanUpCustomUI():
 def extract_markup_content(node):
     try:
         markups_data = {
-            "$schema": "https://raw.githubusercontent.com/slicer/slicer/master/Modules/Loadable/Markups/Resources/Schema/markups-schema-v1.0.3.json",
+            "@schema": "https://raw.githubusercontent.com/slicer/slicer/master/Modules/Loadable/Markups/Resources/Schema/markups-schema-v1.0.3.json#",
             "markups": []
         }
 
         markup_entry = {
-            "type": node.GetMarkupType() if hasattr(node, "GetMarkupType") else "Unknown",
+            "type": node.GetMarkupType(),
             "coordinateSystem": "LPS",
             "coordinateUnits": "mm",
             "locked": bool(node.GetLocked()),
-            "fixedNumberOfControlPoints": False,
-            "lastUsedControlPointNumber": node.GetNumberOfControlPoints()
+            "labelFormat": node.GetLabelFormat(),
+            "lastUsedControlPointNumber": node.GetNumberOfControlPoints(),
+            "controlPoints": [],
+            "measurements": []
         }
 
         # Control points
-        control_points = []
-        for i in range(node.GetNumberOfControlPoints()):
-            try:
-                position = [0.0, 0.0, 0.0]
-                node.GetNthControlPointPosition(i, position)
+        n_points = node.GetNumberOfControlPoints()
+        for i in range(n_points):
+            point = [0, 0, 0]
+            node.GetNthControlPointPosition(i, point)
+            label = node.GetNthControlPointLabel(i)
+            associatedNodeID = node.GetNthControlPointAssociatedNodeID(i)
 
-                point_data = {
-                    "id": str(i + 1),
-                    "label": node.GetNthControlPointLabel(i),
-                    "position": position,
-                    "selected": bool(node.GetNthControlPointSelected(i)),
-                    "locked": bool(node.GetNthControlPointLocked(i)),
-                    "visibility": bool(node.GetNthControlPointVisibility(i)),
-                    "positionStatus": node.GetNthControlPointPositionStatus(i)
-                }
-
-                # Orientation if method exists
-                if hasattr(node, "GetNthControlPointOrientationMatrix"):
-                    orientation = [0.0] * 9
-                    node.GetNthControlPointOrientationMatrix(i, orientation)
-                    point_data["orientation"] = orientation
-
-                control_points.append(point_data)
-
-            except Exception as cp_err:
-                print(f"Failed to extract control point {i} from {node.GetName()}: {cp_err}")
-
-        markup_entry["controlPoints"] = control_points
-
-        # Display node properties
-        display_node = node.GetDisplayNode()
-        if display_node:
-            markup_entry["display"] = {
-                "visibility": bool(display_node.GetVisibility()),
-                "opacity": display_node.GetOpacity(),
-                "color": display_node.GetColor(),
-                "glyphType": display_node.GetGlyphTypeAsString(),
-                "glyphScale": display_node.GetGlyphScale()
+            cp = {
+                "id": str(i + 1),
+                "label": label,
+                "associatedNodeID": associatedNodeID,
+                "position": point
             }
+            markup_entry["controlPoints"].append(cp)
+
+        # ROI-specific
+        if markup_entry["type"] == "ROI":
+            center = [0, 0, 0]
+            node.GetCenter(center)
+            size = node.GetSize()
+            markup_entry["center"] = center
+            markup_entry["size"] = list(size)
+            markup_entry["insideOut"] = bool(node.GetInsideOut())
+
+        # Measurements
+        for j in range(node.GetNumberOfMeasurements()):
+            meas = node.GetMeasurement(j)
+            markup_entry["measurements"].append({
+                "name": meas.GetName(),
+                "enabled": bool(meas.GetEnabled()),
+                "value": meas.GetValue(),
+                "units": meas.GetUnits()
+            })
 
         markups_data["markups"].append(markup_entry)
 
-        # Serialise to string for CSV logging
-        return json.dumps(markups_data).replace("\n", "").replace(",", ";")
+        # Return clean JSON string, single line with semicolons
+        return json.dumps(markups_data, indent=None).replace("\n", "").replace(",", ";")
 
-    except Exception as e:
-        print(f"Failed to extract markup content for {node.GetName()}: {e}")
+    except Exception as extract_error:
+        print(f"Failed to extract content for {node.GetName()}: {extract_error}")
         return "Failed to extract content"
 
 # --- Save markups, update logs, and clean UI on application exit ---
