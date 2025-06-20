@@ -252,52 +252,59 @@ def extract_markup_content(node):
             "markups": []
         }
 
-        markup_entry = {}
-        markup_entry["type"] = node.GetMarkupType() if hasattr(node, "GetMarkupType") else "Unknown"
-        markup_entry["coordinateSystem"] = "LPS"  # 3D Slicer uses LPS by default
-        markup_entry["coordinateUnits"] = "mm"
-        markup_entry["locked"] = bool(node.GetLocked())
-        markup_entry["fixedNumberOfControlPoints"] = False  # Slicer allows dynamic points unless otherwise specified
-        markup_entry["labelFormat"] = node.GetProperty("LabelFormat") if node.HasProperty("LabelFormat") else "%N-%d"
-        markup_entry["lastUsedControlPointNumber"] = node.GetNumberOfControlPoints()
+        markup_entry = {
+            "type": node.GetMarkupType() if hasattr(node, "GetMarkupType") else "Unknown",
+            "coordinateSystem": "LPS",
+            "coordinateUnits": "mm",
+            "locked": bool(node.GetLocked()),
+            "fixedNumberOfControlPoints": False,
+            "lastUsedControlPointNumber": node.GetNumberOfControlPoints()
+        }
 
-        # Extract control points
+        # Control points
         control_points = []
-        n_points = node.GetNumberOfControlPoints()
-        for i in range(n_points):
-            point_data = {}
-            point_data["id"] = str(i + 1)
-            point_data["label"] = node.GetNthControlPointLabel(i)
-            position = [0.0, 0.0, 0.0]
-            node.GetNthControlPointPosition(i, position)
-            point_data["position"] = position
+        for i in range(node.GetNumberOfControlPoints()):
+            try:
+                position = [0.0, 0.0, 0.0]
+                node.GetNthControlPointPosition(i, position)
 
-            orientation = [0.0] * 9  # 3x3 matrix flattened
-            node.GetNthControlPointOrientationMatrix(i, orientation)
-            point_data["orientation"] = orientation
+                point_data = {
+                    "id": str(i + 1),
+                    "label": node.GetNthControlPointLabel(i),
+                    "position": position,
+                    "selected": bool(node.GetNthControlPointSelected(i)),
+                    "locked": bool(node.GetNthControlPointLocked(i)),
+                    "visibility": bool(node.GetNthControlPointVisibility(i)),
+                    "positionStatus": node.GetNthControlPointPositionStatus(i)
+                }
 
-            point_data["selected"] = bool(node.GetNthControlPointSelected(i))
-            point_data["locked"] = bool(node.GetNthControlPointLocked(i))
-            point_data["visibility"] = bool(node.GetNthControlPointVisibility(i))
-            point_data["positionStatus"] = node.GetNthControlPointPositionStatus(i)
-            control_points.append(point_data)
+                # Orientation if method exists
+                if hasattr(node, "GetNthControlPointOrientationMatrix"):
+                    orientation = [0.0] * 9
+                    node.GetNthControlPointOrientationMatrix(i, orientation)
+                    point_data["orientation"] = orientation
+
+                control_points.append(point_data)
+
+            except Exception as cp_err:
+                print(f"Failed to extract control point {i} from {node.GetName()}: {cp_err}")
 
         markup_entry["controlPoints"] = control_points
 
-        # Basic display properties
+        # Display node properties
         display_node = node.GetDisplayNode()
         if display_node:
-            display = {}
-            display["visibility"] = bool(display_node.GetVisibility())
-            display["opacity"] = display_node.GetOpacity()
-            display["color"] = display_node.GetColor()
-            display["glyphType"] = display_node.GetGlyphTypeAsString()
-            display["glyphScale"] = display_node.GetGlyphScale()
-            markup_entry["display"] = display
+            markup_entry["display"] = {
+                "visibility": bool(display_node.GetVisibility()),
+                "opacity": display_node.GetOpacity(),
+                "color": display_node.GetColor(),
+                "glyphType": display_node.GetGlyphTypeAsString(),
+                "glyphScale": display_node.GetGlyphScale()
+            }
 
         markups_data["markups"].append(markup_entry)
 
-        # Serialise to string, cleaning up for CSV if necessary
+        # Serialise to string for CSV logging
         return json.dumps(markups_data).replace("\n", "").replace(",", ";")
 
     except Exception as e:
