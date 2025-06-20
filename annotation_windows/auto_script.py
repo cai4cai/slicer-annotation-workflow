@@ -248,114 +248,60 @@ def cleanUpCustomUI():
 def extract_markup_content(node):
     try:
         markups_data = {
-            "@schema": "https://raw.githubusercontent.com/slicer/slicer/master/Modules/Loadable/Markups/Resources/Schema/markups-schema-v1.0.3.json#",
+            "$schema": "https://raw.githubusercontent.com/slicer/slicer/master/Modules/Loadable/Markups/Resources/Schema/markups-schema-v1.0.3.json",
             "markups": []
         }
 
-        markup_entry = {
-            "type": node.GetMarkupType(),  # e.g. Fiducial, Line, ROI
-            "coordinateSystem": "LPS",
-            "coordinateUnits": "mm",
-            "locked": bool(node.GetLocked()),
-            "fixedNumberOfControlPoints": False,
-            "labelFormat": node.GetLabelFormat(),
-            "lastUsedControlPointNumber": node.GetNumberOfControlPoints(),
-            "controlPoints": [],
-            "measurements": [],
-            "display": {}
-        }
+        markup_entry = {}
+        markup_entry["type"] = node.GetMarkupType() if hasattr(node, "GetMarkupType") else "Unknown"
+        markup_entry["coordinateSystem"] = "LPS"  # 3D Slicer uses LPS by default
+        markup_entry["coordinateUnits"] = "mm"
+        markup_entry["locked"] = bool(node.GetLocked())
+        markup_entry["fixedNumberOfControlPoints"] = False  # Slicer allows dynamic points unless otherwise specified
+        markup_entry["labelFormat"] = node.GetProperty("LabelFormat") if node.HasProperty("LabelFormat") else "%N-%d"
+        markup_entry["lastUsedControlPointNumber"] = node.GetNumberOfControlPoints()
 
-        # Control Points
+        # Extract control points
+        control_points = []
         n_points = node.GetNumberOfControlPoints()
         for i in range(n_points):
-            point = [0, 0, 0]
-            node.GetNthControlPointPosition(i, point)
-            label = node.GetNthControlPointLabel(i)
-            description = node.GetNthControlPointDescription(i)
-            associatedNodeID = node.GetNthControlPointAssociatedNodeID(i)
-            orientation = node.GetNthControlPointOrientationMatrix(i)
+            point_data = {}
+            point_data["id"] = str(i + 1)
+            point_data["label"] = node.GetNthControlPointLabel(i)
+            position = [0.0, 0.0, 0.0]
+            node.GetNthControlPointPosition(i, position)
+            point_data["position"] = position
 
-            cp = {
-                "id": str(i + 1),
-                "label": label,
-                "description": description,
-                "associatedNodeID": associatedNodeID,
-                "position": point,
-                "orientation": list(orientation),
-                "selected": bool(node.GetNthControlPointSelected(i)),
-                "locked": bool(node.GetNthControlPointLocked(i)),
-                "visibility": bool(node.GetNthControlPointVisibility(i)),
-                "positionStatus": node.GetNthControlPointPositionStatusAsString(i)
-            }
-            markup_entry["controlPoints"].append(cp)
+            orientation = [0.0] * 9  # 3x3 matrix flattened
+            node.GetNthControlPointOrientationMatrix(i, orientation)
+            point_data["orientation"] = orientation
 
-        # ROI-specific fields
-        if markup_entry["type"] == "ROI":
-            center = [0, 0, 0]
-            node.GetCenter(center)
-            size = node.GetSize()
-            orientation_matrix = [0.0] * 9
-            node.GetObjectToBaseMatrix().DeepCopy(orientation_matrix)
+            point_data["selected"] = bool(node.GetNthControlPointSelected(i))
+            point_data["locked"] = bool(node.GetNthControlPointLocked(i))
+            point_data["visibility"] = bool(node.GetNthControlPointVisibility(i))
+            point_data["positionStatus"] = node.GetNthControlPointPositionStatus(i)
+            control_points.append(point_data)
 
-            markup_entry["roiType"] = node.GetROITypeAsString()
-            markup_entry["center"] = center
-            markup_entry["size"] = list(size)
-            markup_entry["orientation"] = list(orientation_matrix)
-            markup_entry["insideOut"] = bool(node.GetInsideOut())
+        markup_entry["controlPoints"] = control_points
 
-        # Measurements
-        for j in range(node.GetNumberOfMeasurements()):
-            meas = node.GetMeasurement(j)
-            markup_entry["measurements"].append({
-                "name": meas.GetName(),
-                "enabled": bool(meas.GetEnabled()),
-                "value": meas.GetValue(),
-                "units": meas.GetUnits(),
-                "printFormat": meas.GetPrintFormat()
-            })
+        # Basic display properties
+        display_node = node.GetDisplayNode()
+        if display_node:
+            display = {}
+            display["visibility"] = bool(display_node.GetVisibility())
+            display["opacity"] = display_node.GetOpacity()
+            display["color"] = display_node.GetColor()
+            display["glyphType"] = display_node.GetGlyphTypeAsString()
+            display["glyphScale"] = display_node.GetGlyphScale()
+            markup_entry["display"] = display
 
-        # Display properties
-        displayNode = node.GetDisplayNode()
-        if displayNode:
-            markup_entry["display"] = {
-                "visibility": bool(displayNode.GetVisibility()),
-                "opacity": displayNode.GetOpacity(),
-                "color": list(displayNode.GetColor()),
-                "selectedColor": list(displayNode.GetSelectedColor()),
-                "activeColor": list(displayNode.GetActiveColor()),
-                "propertiesLabelVisibility": bool(displayNode.GetPropertiesLabelVisibility()),
-                "pointLabelsVisibility": bool(displayNode.GetPointLabelsVisibility()),
-                "textScale": displayNode.GetTextScale(),
-                "glyphType": displayNode.GetGlyphTypeAsString(),
-                "glyphScale": displayNode.GetGlyphScale(),
-                "glyphSize": displayNode.GetGlyphSize(),
-                "useGlyphScale": bool(displayNode.GetUseGlyphScale()),
-                "sliceProjection": bool(displayNode.GetSliceProjection()),
-                "sliceProjectionUseFiducialColor": bool(displayNode.GetSliceProjectionUseFiducialColor()),
-                "sliceProjectionOutlinedBehindSlicePlane": bool(displayNode.GetSliceProjectionOutlinedBehindSlicePlane()),
-                "sliceProjectionColor": list(displayNode.GetSliceProjectionColor()),
-                "sliceProjectionOpacity": displayNode.GetSliceProjectionOpacity(),
-                "lineThickness": displayNode.GetLineThickness(),
-                "lineColorFadingStart": displayNode.GetLineColorFadingStart(),
-                "lineColorFadingEnd": displayNode.GetLineColorFadingEnd(),
-                "lineColorFadingSaturation": displayNode.GetLineColorFadingSaturation(),
-                "lineColorFadingHueOffset": displayNode.GetLineColorFadingHueOffset(),
-                "handlesInteractive": bool(displayNode.GetHandlesInteractive()),
-                "translationHandleVisibility": bool(displayNode.GetTranslationHandleVisibility()),
-                "rotationHandleVisibility": bool(displayNode.GetRotationHandleVisibility()),
-                "scaleHandleVisibility": bool(displayNode.GetScaleHandleVisibility()),
-                "interactionHandleScale": displayNode.GetInteractionHandleScale(),
-                "snapMode": displayNode.GetSnapModeAsString()
-            }
-
-        # Append final markup entry to markups list
         markups_data["markups"].append(markup_entry)
 
-        # Return as JSON string (optional: replace commas / newlines if needed)
-        return json.dumps(markups_data, indent=None).replace("\n", "").replace(",", ";")
+        # Serialise to string, cleaning up for CSV if necessary
+        return json.dumps(markups_data).replace("\n", "").replace(",", ";")
 
-    except Exception as extract_error:
-        print(f"Failed to extract detailed markup content for {node.GetName()}: {extract_error}")
+    except Exception as e:
+        print(f"Failed to extract markup content for {node.GetName()}: {e}")
         return "Failed to extract content"
 
 # --- Save markups, update logs, and clean UI on application exit ---
