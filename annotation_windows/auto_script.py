@@ -247,65 +247,35 @@ def cleanUpCustomUI():
 # --- Extract markup content as JSON ---
 def extract_markup_content(node):
     try:
-        markups_data = {
-            "@schema": "https://raw.githubusercontent.com/slicer/slicer/master/Modules/Loadable/Markups/Resources/Schema/markups-schema-v1.0.3.json#",
-            "markups": []
-        }
-
-        markup_entry = {
-            "type": node.GetMarkupType(),
-            "coordinateSystem": "LPS",
-            "coordinateUnits": "mm",
-            "locked": bool(node.GetLocked()),
-            "labelFormat": node.GetLabelFormat(),
-            "lastUsedControlPointNumber": node.GetNumberOfControlPoints(),
-            "controlPoints": [],
-            "measurements": []
-        }
-
-        # Control points
+        markups_data = {}
         n_points = node.GetNumberOfControlPoints()
+        points = []
         for i in range(n_points):
             point = [0, 0, 0]
             node.GetNthControlPointPosition(i, point)
             label = node.GetNthControlPointLabel(i)
-            associatedNodeID = node.GetNthControlPointAssociatedNodeID(i)
+            points.append({'label': label, 'position': point})
 
-            cp = {
-                "id": str(i + 1),
-                "label": label,
-                "associatedNodeID": associatedNodeID,
-                "position": point
-            }
-            markup_entry["controlPoints"].append(cp)
+        markups_data['points'] = points
+        markups_data['name'] = node.GetName()
+        markups_data['id'] = node.GetID()
+        markups_data['number_of_points'] = n_points
 
-        # ROI-specific
-        if markup_entry["type"] == "ROI":
-            center = [0, 0, 0]
-            node.GetCenter(center)
-            size = node.GetSize()
-            markup_entry["center"] = center
-            markup_entry["size"] = list(size)
-            markup_entry["insideOut"] = bool(node.GetInsideOut())
+        # Add coordinate system (Slicer uses LPS for export typically)
+        markups_data['coordinateSystem'] = "LPS"
 
-        # Measurements
-        for j in range(node.GetNumberOfMeasurements()):
-            meas = node.GetMeasurement(j)
-            markup_entry["measurements"].append({
-                "name": meas.GetName(),
-                "enabled": bool(meas.GetEnabled()),
-                "value": meas.GetValue(),
-                "units": meas.GetUnits()
-            })
+        # Add associated parent transform, if any
+        parent_transform = node.GetParentTransformNode()
+        if parent_transform:
+            markups_data['parentTransformID'] = parent_transform.GetID()
+        else:
+            markups_data['parentTransformID'] = None
 
-        markups_data["markups"].append(markup_entry)
-
-        # Return clean JSON string, single line with semicolons
-        return json.dumps(markups_data, indent=None).replace("\n", "").replace(",", ";")
-
+        return json.dumps(markups_data).replace("\n", "").replace(",", ";")
     except Exception as extract_error:
-        print(f"Failed to extract content for {node.GetName()}: {extract_error}")
+        print(f"Failed to extract markup content for {node.GetName()}: {extract_error}")
         return "Failed to extract content"
+
 
 # --- Save markups, update logs, and clean UI on application exit ---
 def onAppExit(caller=None, event=None):
