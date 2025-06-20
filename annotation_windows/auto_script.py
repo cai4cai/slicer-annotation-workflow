@@ -305,28 +305,28 @@ def onAppExit(caller=None, event=None):
         for fname, data in markup_log.items():
             log.write(f"{fname},{data['created_at']},\"{data['content']}\",{data['deleted_at']}\n")
 
-    # Update report log
-    log_csv = os.path.abspath(args.log_csv)
-    temp_csv = log_csv + ".tmp"
-    report_number = args.report_number
+    # # Update report log
+    # log_csv = os.path.abspath(args.log_csv)
+    # temp_csv = log_csv + ".tmp"
+    # report_number = args.report_number
 
-    try:
-        done_status = "True" if len(final_markup_nodes) > 0 else ""
+    # try:
+    #     done_status = "True" if len(final_markup_nodes) > 0 else ""
 
-        with open(log_csv, 'r') as infile, open(temp_csv, 'w') as outfile:
-            for line in infile:
-                if line.startswith(report_number + ","):
-                    parts = line.strip().split(',')
-                    while len(parts) < 3:
-                        parts.append("")
-                    parts[2] = done_status
-                    outfile.write(",".join(parts) + "\n")
-                else:
-                    outfile.write(line)
-        os.replace(temp_csv, log_csv)
-        print(f"Updated log for report {report_number} to Done={done_status if done_status else 'Empty'}")
-    except Exception as e:
-        print(f"Failed to update log file: {e}")
+    #     with open(log_csv, 'r') as infile, open(temp_csv, 'w') as outfile:
+    #         for line in infile:
+    #             if line.startswith(report_number + ","):
+    #                 parts = line.strip().split(',')
+    #                 while len(parts) < 3:
+    #                     parts.append("")
+    #                 parts[2] = done_status
+    #                 outfile.write(",".join(parts) + "\n")
+    #             else:
+    #                 outfile.write(line)
+    #     os.replace(temp_csv, log_csv)
+    #     print(f"Updated log for report {report_number} to Done={done_status if done_status else 'Empty'}")
+    # except Exception as e:
+    #     print(f"Failed to update log file: {e}")
 
 # --- UI customisation routines ---
 def hideAllGUIComponents():
