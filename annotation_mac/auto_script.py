@@ -7,6 +7,7 @@ from qt import QTimer
 import datetime
 import json
 import glob
+import errno
 
 # --- Configure application settings ---
 settings = slicer.app.settings()
@@ -257,38 +258,36 @@ def onAppExit(caller=None, event=None):
     if os.path.exists(markup_log_file):
         with open(markup_log_file, 'r') as log:
             for line in log.readlines()[1:]:
-                parts = line.strip().split(",", 3)
+                parts = line.strip().split(",", 4)
                 if len(parts) >= 4:
                     markup_log[parts[0]] = {
                         'created_at': parts[1],
                         'content': parts[2],
-                        'deleted_at': parts[3]
+                        'deleted_at': parts[3],
+                        'filename_long': parts[4] if len(parts) > 4 else ""
                     }
-    # Get the last appended number if markup_log has any entries
-    if len(markup_log) != 0:
-        max_number = 0
-        for markup in markup_log:
-            try:
-                number_part = int(markup.replace(".json", "").split("_")[-1])
-                if number_part > max_number:
-                    max_number = number_part
-            except ValueError:
-                # Skip if filename doesn't end with a number
-                continue
-    else:
-        max_number = 0
+
+    # Get last number if any
+    max_number = 0
+    for markup in markup_log:
+        try:
+            number_part = int(markup.replace(".json", "").split("_")[-1])
+            if number_part > max_number:
+                max_number = number_part
+        except ValueError:
+            continue
 
     now_str = datetime.datetime.now().isoformat()
     current_filenames = set()
 
     for markupNode in final_markup_nodes:
-        node_name = markupNode.GetName()#.replace(" ", "_")
+        node_name = markupNode.GetName()
         encoded_node_name = encode_filename(node_name)
 
-        # Check if this markup has already been saved by looking for filenames starting with node_name_
+        # Check for existing
         existing_file = None
         for fname in markup_log.keys():
-            if fname == encoded_node_name+".json":
+            if fname == encoded_node_name + ".json":
                 existing_file = fname
                 break
 
@@ -296,39 +295,59 @@ def onAppExit(caller=None, event=None):
             safe_name = existing_file
         else:
             max_number += 1
-            # node_id = markupNode.GetID()
-            # base_name = f"{node_name}_{node_id}".replace(" ", "_")
-            base_name = encoded_node_name
-            safe_name = f"{base_name}_{max_number}.json"
+            safe_name = f"{encoded_node_name}_{max_number}.json"
 
         output_path = os.path.join(sourceFolder, safe_name)
         current_filenames.add(safe_name)
 
+        filename_long_flag = False
+        if len(safe_name) > 255:
+            print(f"Warning: Filename too long ({len(safe_name)} characters): {safe_name}")
+            filename_long_flag = True
+
         try:
             markupNode.Modified()
             if slicer.util.saveNode(markupNode, output_path):
-                print(f"Saved markup:{output_path}")
+                print(f"✔️ Saved markup: {output_path}")
 
                 with open(output_path, 'r') as f:
                     content = json.dumps(json.load(f)).replace("\n", "").replace(",", ";")
 
-                if safe_name not in markup_log:
-                    markup_log[safe_name] = {
-                        'created_at': now_str,
-                        'content': content,
-                        'deleted_at': ""
-                    }
-                else:
-                    markup_log[safe_name]['content'] = content
-                    markup_log[safe_name]['deleted_at'] = ""
+                markup_log[safe_name] = {
+                    'created_at': now_str,
+                    'content': content,
+                    'deleted_at': "",
+                    'filename_long': str(filename_long_flag)
+                }
 
             else:
                 print(f"Failed to save markup: {node_name}")
+                markup_log[safe_name] = {
+                    'created_at': now_str,
+                    'content': "Save failed",
+                    'deleted_at': "",
+                    'filename_long': str(filename_long_flag)
+                }
 
-        except Exception as e:
-            print(f"Error saving markup {node_name}: {e}")
+        except OSError as e:
+            if e.errno == errno.ENAMETOOLONG:
+                print(f"OS Error: filename too long for {safe_name}")
+                markup_log[safe_name] = {
+                    'created_at': now_str,
+                    'content': "Filename too long - save skipped",
+                    'deleted_at': "",
+                    'filename_long': "True"
+                }
+            else:
+                print(f"Error saving markup {node_name}: {e}")
+                markup_log[safe_name] = {
+                    'created_at': now_str,
+                    'content': f"Error: {e}",
+                    'deleted_at': "",
+                    'filename_long': str(filename_long_flag)
+                }
 
-    # Detect deleted markups (present in log but no longer in scene)
+    # Detect deleted markups
     saved_filenames = set(markup_log.keys())
     deleted_files = saved_filenames - current_filenames
 
@@ -345,9 +364,9 @@ def onAppExit(caller=None, event=None):
 
     # Save updated markup log
     with open(markup_log_file, 'w') as log:
-        log.write("filename,created_at,content,deleted_at\n")
+        log.write("filename,created_at,content,deleted_at,filename_long\n")
         for fname, data in markup_log.items():
-            log.write(f"{fname},{data['created_at']},\"{data['content']}\",{data['deleted_at']}\n")
+            log.write(f"{fname},{data['created_at']},\"{data['content']}\",{data['deleted_at']},{data.get('filename_long', '')}\n")
 
     # Update report log
     log_csv = os.path.abspath(args.log_csv)
