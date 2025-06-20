@@ -6,6 +6,7 @@ import qt
 from qt import QTimer
 import datetime
 import json
+import glob
 
 # --- Configure application settings ---
 settings = slicer.app.settings()
@@ -452,7 +453,15 @@ def show_report_dock(report_file_path, report_number):
     mw.addDockWidget(qt.Qt.RightDockWidgetArea, dockWidget)
     dockWidget.show()
 
-report_file_path = os.path.join(args.source_folder, f"report_{args.report_number}.txt")
+# report_file_path = os.path.join(args.source_folder, f"report_{args.report_number}.txt")
+# Find all files matching report_*.txt in the source folder
+report_files = glob.glob(os.path.join(args.source_folder, "report_*.txt"))
+
+# If you expect only one match and want to get it:
+if report_files:
+    report_file_path = report_files[0]  # or handle multiple files if needed
+else:
+    report_file_path = None  # or raise an error / handle missing file
 
 # --- Bind exit event and initialise app ---
 slicer.app.connect("aboutToQuit()", onAppExit)
