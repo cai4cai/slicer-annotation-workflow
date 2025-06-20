@@ -244,6 +244,26 @@ def cleanUpCustomUI():
         customToolBar = None
     print("Custom UI cleaned up.")
 
+# --- Extract markup content as JSON ---
+def extract_markup_content(node):
+    try:
+        markups_data = {}
+        n_points = node.GetNumberOfControlPoints()
+        points = []
+        for i in range(n_points):
+            point = [0, 0, 0]
+            node.GetNthControlPointPosition(i, point)
+            label = node.GetNthControlPointLabel(i)
+            points.append({'label': label, 'position': point})
+        markups_data['points'] = points
+        markups_data['name'] = node.GetName()
+        markups_data['id'] = node.GetID()
+        markups_data['number_of_points'] = n_points
+        return json.dumps(markups_data).replace("\n", "").replace(",", ";")
+    except Exception as extract_error:
+        print(f"Failed to extract markup content for {node.GetName()}: {extract_error}")
+        return "Failed to extract content"
+
 # --- Save markups, update logs, and clean UI on application exit ---
 def onAppExit(caller=None, event=None):
     print("Slicer is closing. Cleaning up custom UI...")
@@ -322,9 +342,12 @@ def onAppExit(caller=None, event=None):
 
             else:
                 print(f"Failed to save markup: {node_name}")
+
+                content = extract_markup_content(markupNode)
+
                 markup_log[safe_name] = {
                     'created_at': now_str,
-                    'content': "Save failed",
+                    'content': content,
                     'deleted_at': "",
                     'filename_long': str(filename_long_flag)
                 }
@@ -333,27 +356,7 @@ def onAppExit(caller=None, event=None):
             if e.errno == errno.ENAMETOOLONG:
                 print(f"OS Error: filename too long for {safe_name}")
 
-                # Fallback: extract markup content manually as JSON-like dict
-                try:
-                    markups_data = {}
-                    n_points = markupNode.GetNumberOfControlPoints()
-                    points = []
-                    for i in range(n_points):
-                        point = [0, 0, 0]
-                        markupNode.GetNthControlPointPosition(i, point)
-                        label = markupNode.GetNthControlPointLabel(i)
-                        points.append({'label': label, 'position': point})
-
-                    markups_data['points'] = points
-                    markups_data['name'] = markupNode.GetName()
-                    markups_data['id'] = markupNode.GetID()
-                    markups_data['number_of_points'] = n_points
-
-                    content = json.dumps(markups_data).replace("\n", "").replace(",", ";")
-
-                except Exception as extract_error:
-                    print(f"Failed to extract markup content for {node_name}: {extract_error}")
-                    content = "Failed to extract content"
+                content = extract_markup_content(markupNode)
 
                 markup_log[safe_name] = {
                     'created_at': now_str,
