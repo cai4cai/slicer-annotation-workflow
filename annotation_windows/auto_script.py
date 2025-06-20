@@ -332,12 +332,36 @@ def onAppExit(caller=None, event=None):
         except OSError as e:
             if e.errno == errno.ENAMETOOLONG:
                 print(f"OS Error: filename too long for {safe_name}")
+
+                # Fallback: extract markup content manually as JSON-like dict
+                try:
+                    markups_data = {}
+                    n_points = markupNode.GetNumberOfControlPoints()
+                    points = []
+                    for i in range(n_points):
+                        point = [0, 0, 0]
+                        markupNode.GetNthControlPointPosition(i, point)
+                        label = markupNode.GetNthControlPointLabel(i)
+                        points.append({'label': label, 'position': point})
+
+                    markups_data['points'] = points
+                    markups_data['name'] = markupNode.GetName()
+                    markups_data['id'] = markupNode.GetID()
+                    markups_data['number_of_points'] = n_points
+
+                    content = json.dumps(markups_data).replace("\n", "").replace(",", ";")
+
+                except Exception as extract_error:
+                    print(f"Failed to extract markup content for {node_name}: {extract_error}")
+                    content = "Failed to extract content"
+
                 markup_log[safe_name] = {
                     'created_at': now_str,
-                    'content': "Filename too long - save skipped",
+                    'content': content,
                     'deleted_at': "",
                     'filename_long': "True"
                 }
+
             else:
                 print(f"Error saving markup {node_name}: {e}")
                 markup_log[safe_name] = {
@@ -346,7 +370,6 @@ def onAppExit(caller=None, event=None):
                     'deleted_at': "",
                     'filename_long': str(filename_long_flag)
                 }
-
     # Detect deleted markups
     saved_filenames = set(markup_log.keys())
     deleted_files = saved_filenames - current_filenames
