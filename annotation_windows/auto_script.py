@@ -38,6 +38,37 @@ if not os.path.exists(markup_log_file):
 # --- Set default style as Light ---
 slicer.app.setStyle("Light Slicer")
 
+# --- Sanitise filenames easy encoding and decoding
+def encode_filename(name):
+    # Replace disallowed or problematic characters with safe substitutes
+    return (name
+            .replace('/', '__SLASH__')
+            .replace('\\', '__BACKSLASH__')
+            .replace(':', '__COLON__')
+            .replace('*', '__ASTERISK__')
+            .replace('?', '__QUESTION__')
+            .replace('"', '__QUOTE__')
+            .replace('<', '__LT__')
+            .replace('>', '__GT__')
+            .replace('|', '__PIPE__')
+            .replace('\0', '__NULL__')
+            .replace(' ', '__SPACE__'))
+
+def decode_filename(encoded_name):
+    # Replace the safe substitutes back with their original characters
+    return (encoded_name
+            .replace('__SLASH__', '/')
+            .replace('__BACKSLASH__', '\\')
+            .replace('__COLON__', ':')
+            .replace('__ASTERISK__', '*')
+            .replace('__QUESTION__', '?')
+            .replace('__QUOTE__', '"')
+            .replace('__LT__', '<')
+            .replace('__GT__', '>')
+            .replace('__PIPE__', '|')
+            .replace('__NULL__', '\0')
+            .replace('__SPACE__', ' '))
+
 # --- Function to load NIfTI and markup files into Slicer ---
 def loadEverything():
     if nifti_files:
@@ -241,12 +272,13 @@ def onAppExit(caller=None, event=None):
     current_filenames = set()
 
     for markupNode in final_markup_nodes:
-        node_name = markupNode.GetName().replace(" ", "_")
+        node_name = markupNode.GetName()#.replace(" ", "_")
+        encoded_node_name = encode_filename(node_name)
 
         # Check if this markup has already been saved by looking for filenames starting with node_name_
         existing_file = None
         for fname in markup_log.keys():
-            if fname == node_name+".json":
+            if fname == encoded_node_name+".json":
                 existing_file = fname
                 break
 
@@ -254,8 +286,9 @@ def onAppExit(caller=None, event=None):
             safe_name = existing_file
         else:
             max_number += 1
-            node_id = markupNode.GetID()
-            base_name = f"{node_name}_{node_id}".replace(" ", "_")
+            # node_id = markupNode.GetID()
+            # base_name = f"{node_name}_{node_id}".replace(" ", "_")
+            base_name = encoded_node_name
             safe_name = f"{base_name}_{max_number}.json"
 
         output_path = os.path.join(sourceFolder, safe_name)
