@@ -40,34 +40,44 @@ slicer.app.setStyle("Light Slicer")
 
 # --- Sanitise filenames easy encoding and decoding
 def encode_filename(name):
-    # Replace disallowed or problematic characters with safe substitutes
-    return (name
-            .replace('/', '__SLASH__')
-            .replace('\\', '__BACKSLASH__')
-            .replace(':', '__COLON__')
-            .replace('*', '__ASTERISK__')
-            .replace('?', '__QUESTION__')
-            .replace('"', '__QUOTE__')
-            .replace('<', '__LT__')
-            .replace('>', '__GT__')
-            .replace('|', '__PIPE__')
-            .replace('\0', '__NULL__')
-            .replace(' ', '__SPACE__'))
+    replacements = {
+        '/': '_S_',
+        '\\': '_B_',
+        ':': '_C_',
+        '*': '_A_',
+        '?': '_Q_',
+        '"': '_W_',
+        '<': '_L_',
+        '>': '_G_',
+        '|': '_P_',
+        '\0': '_N_',
+        ' ': '_U_',
+        ',': '_Z_',
+        '"': '_E_'
+    }
+    for char, code in replacements.items():
+        name = name.replace(char, code)
+    return name
 
 def decode_filename(encoded_name):
-    # Replace the safe substitutes back with their original characters
-    return (encoded_name
-            .replace('__SLASH__', '/')
-            .replace('__BACKSLASH__', '\\')
-            .replace('__COLON__', ':')
-            .replace('__ASTERISK__', '*')
-            .replace('__QUESTION__', '?')
-            .replace('__QUOTE__', '"')
-            .replace('__LT__', '<')
-            .replace('__GT__', '>')
-            .replace('__PIPE__', '|')
-            .replace('__NULL__', '\0')
-            .replace('__SPACE__', ' '))
+    replacements = {
+        '_S_': '/',
+        '_B_': '\\',
+        '_C_': ':',
+        '_A_': '*',
+        '_Q_': '?',
+        '_W_': '"',
+        '_L_': '<',
+        '_G_': '>',
+        '_P_': '|',
+        '_N_': '\0',
+        '_U_': ' ',
+        '_Z_': ',',
+        '_E_': '"'
+    }
+    for code, char in replacements.items():
+        encoded_name = encoded_name.replace(code, char)
+    return encoded_name
 
 # --- Function to load NIfTI and markup files into Slicer ---
 def loadEverything():
