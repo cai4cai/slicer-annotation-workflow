@@ -251,10 +251,11 @@ def extract_markup_content(node):
         n_points = node.GetNumberOfControlPoints()
         points = []
         for i in range(n_points):
-            point = [0, 0, 0]
-            node.GetNthControlPointPosition(i, point)
+            ras_position = [0.0, 0.0, 0.0]
+            node.GetNthControlPointPosition(i, ras_position)
+            lps_position = [-ras_position[0], -ras_position[1], ras_position[2]]
             label = node.GetNthControlPointLabel(i)
-            points.append({'label': label, 'position': point})
+            points.append({'label': label, 'position': lps_position})
 
         markups_data['points'] = points
         markups_data['name'] = node.GetName()
@@ -266,15 +267,25 @@ def extract_markup_content(node):
 
         # Add associated parent transform, if any
         parent_transform = node.GetParentTransformNode()
-        if parent_transform:
-            markups_data['parentTransformID'] = parent_transform.GetID()
-        else:
-            markups_data['parentTransformID'] = None
+        markups_data['parentTransformID'] = parent_transform.GetID() if parent_transform else None
+
+        # If it's an ROI node, extract its size
+        if node.IsA("vtkMRMLMarkupsROINode"):
+            try:
+                size = [0.0, 0.0, 0.0]
+                node.GetRadiusXYZ(size)#.GetSize(size)
+                size = [s * 2 for s in size] # GetRadiusXYZ() ×2 gives the same size as when ROI saved normally
+                markups_data['size'] = size
+            except AttributeError:
+                print(f"⚠️ ROI node {node.GetName()} has no GetSize() method.")
+                markups_data['size'] = None
 
         return json.dumps(markups_data).replace("\n", "").replace(",", ";")
+
     except Exception as extract_error:
         print(f"Failed to extract markup content for {node.GetName()}: {extract_error}")
         return "Failed to extract content"
+
 
 
 # --- Save markups, update logs, and clean UI on application exit ---

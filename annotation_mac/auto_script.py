@@ -244,6 +244,50 @@ def cleanUpCustomUI():
         customToolBar = None
     print("Custom UI cleaned up.")
 
+# --- Extract markup content as JSON ---
+def extract_markup_content(node):
+    try:
+        markups_data = {}
+        n_points = node.GetNumberOfControlPoints()
+        points = []
+        for i in range(n_points):
+            ras_position = [0.0, 0.0, 0.0]
+            node.GetNthControlPointPosition(i, ras_position)
+            lps_position = [-ras_position[0], -ras_position[1], ras_position[2]]
+            label = node.GetNthControlPointLabel(i)
+            points.append({'label': label, 'position': lps_position})
+
+        markups_data['points'] = points
+        markups_data['name'] = node.GetName()
+        markups_data['id'] = node.GetID()
+        markups_data['number_of_points'] = n_points
+
+        # Add coordinate system (Slicer uses LPS for export typically)
+        markups_data['coordinateSystem'] = "LPS"
+
+        # Add associated parent transform, if any
+        parent_transform = node.GetParentTransformNode()
+        markups_data['parentTransformID'] = parent_transform.GetID() if parent_transform else None
+
+        # If it's an ROI node, extract its size
+        if node.IsA("vtkMRMLMarkupsROINode"):
+            try:
+                size = [0.0, 0.0, 0.0]
+                node.GetRadiusXYZ(size)#.GetSize(size)
+                size = [s * 2 for s in size] # GetRadiusXYZ() ×2 gives the same size as when ROI saved normally
+                markups_data['size'] = size
+            except AttributeError:
+                print(f"⚠️ ROI node {node.GetName()} has no GetSize() method.")
+                markups_data['size'] = None
+
+        return json.dumps(markups_data).replace("\n", "").replace(",", ";")
+
+    except Exception as extract_error:
+        print(f"Failed to extract markup content for {node.GetName()}: {extract_error}")
+        return "Failed to extract content"
+
+
+
 # --- Save markups, update logs, and clean UI on application exit ---
 def onAppExit(caller=None, event=None):
     print("Slicer is closing. Cleaning up custom UI...")
@@ -322,9 +366,12 @@ def onAppExit(caller=None, event=None):
 
             else:
                 print(f"Failed to save markup: {node_name}")
+
+                content = extract_markup_content(markupNode)
+
                 markup_log[safe_name] = {
                     'created_at': now_str,
-                    'content': "Save failed",
+                    'content': content,
                     'deleted_at': "",
                     'filename_long': str(filename_long_flag)
                 }
@@ -332,12 +379,16 @@ def onAppExit(caller=None, event=None):
         except OSError as e:
             if e.errno == errno.ENAMETOOLONG:
                 print(f"OS Error: filename too long for {safe_name}")
+
+                content = extract_markup_content(markupNode)
+
                 markup_log[safe_name] = {
                     'created_at': now_str,
-                    'content': "Filename too long - save skipped",
+                    'content': content,
                     'deleted_at': "",
                     'filename_long': "True"
                 }
+
             else:
                 print(f"Error saving markup {node_name}: {e}")
                 markup_log[safe_name] = {
@@ -346,7 +397,6 @@ def onAppExit(caller=None, event=None):
                     'deleted_at': "",
                     'filename_long': str(filename_long_flag)
                 }
-
     # Detect deleted markups
     saved_filenames = set(markup_log.keys())
     deleted_files = saved_filenames - current_filenames
