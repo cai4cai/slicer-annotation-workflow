@@ -277,7 +277,7 @@ def extract_markup_content(node):
                 size = [s * 2 for s in size] # GetRadiusXYZ() ×2 gives the same size as when ROI saved normally
                 markups_data['size'] = size
             except AttributeError:
-                print(f"⚠️ ROI node {node.GetName()} has no GetSize() method.")
+                print(f"ROI node {node.GetName()} has no GetSize() method.")
                 markups_data['size'] = None
 
         return json.dumps(markups_data).replace("\n", "").replace(",", ";")
@@ -352,7 +352,7 @@ def onAppExit(caller=None, event=None):
         try:
             markupNode.Modified()
             if slicer.util.saveNode(markupNode, output_path):
-                print(f"✔️ Saved markup: {output_path}")
+                print(f"Saved markup: {output_path}")
 
                 with open(output_path, 'r') as f:
                     content = json.dumps(json.load(f)).replace("\n", "").replace(",", ";")
