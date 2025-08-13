@@ -11,7 +11,7 @@ import errno
 import re
 
 try:
-    import pandas
+    import pandas as pd
 except ImportError:
     slicer.util.pip_install("pandas")
     import pandas as pd
@@ -481,7 +481,7 @@ def show_excel_preview_dock(excel_path):
 
     if os.path.exists(excel_path):
         try:
-            df = pandas.read_excel(excel_path, engine='openpyxl')
+            df = pd.read_excel(excel_path, engine='openpyxl')
             df_preview = df.iloc[:, [0,1,3,4]]  # First two columns
 
             tableWidget.setColumnCount(len(df_preview.columns))
