@@ -11,7 +11,7 @@ import errno
 import re
 
 try:
-    import pandas
+    import pandas as pd
 except ImportError:
     slicer.util.pip_install("pandas")
     import pandas as pd
@@ -57,18 +57,24 @@ def loadEverything():
     else:
         print("No NIfTI files provided.")
 
-    if markup_files:
+    # Load markups if available and if markup_log.xlsx exists
+    if markup_files and os.path.exists(markup_log_file):
+        df = pd.read_excel(markup_log_file, engine='openpyxl')
+        # Filter rows where deleted_at is empty or NaN (do not display deleted versions)
+        active_markups = df[df['deleted_at'].isna()]
         print("Loading markup files...")
-        for markup_path in markup_files:
-            if markup_path and os.path.isfile(markup_path):
-                try:
-                    slicer.util.loadMarkups(markup_path)
-                    loaded_markup_names.append(os.path.basename(markup_path).replace(".json", ""))
-                    print(f"Loaded markup: {markup_path}")
-                except Exception as e:
-                    print(f"Failed to load markup {markup_path}: {e}")
-            else:
-                print(f"Markup file not found: {markup_path}")
+        for filename in active_markups['new_filename']:
+                # Construct full path
+                markup_path = os.path.join(sourceFolder, filename)
+                if os.path.isfile(markup_path):
+                    try:
+                        slicer.util.loadMarkups(markup_path)
+                        loaded_markup_names.append(os.path.basename(markup_path).replace(".json", ""))
+                        print(f"Loaded markup: {markup_path}")
+                    except Exception as e:
+                        print(f"Failed to load markup {markup_path}: {e}")
+                else:
+                    print(f"Markup file not found: {markup_path}")
     else:
         print("No markup files provided.")
 
@@ -481,7 +487,7 @@ def show_excel_preview_dock(excel_path):
 
     if os.path.exists(excel_path):
         try:
-            df = pandas.read_excel(excel_path, engine='openpyxl')
+            df = pd.read_excel(excel_path, engine='openpyxl')
             df_preview = df.iloc[:, [0,1,3,4]]  # First two columns
 
             tableWidget.setColumnCount(len(df_preview.columns))
