@@ -10,17 +10,39 @@ import glob
 import errno
 import re
 
+# Try to import pandas
 try:
     import pandas as pd
+    print("✓ pandas already installed")
 except ImportError:
-    slicer.util.pip_install("pandas")
-    import pandas as pd
+    print("Installing pandas...")
+    try:
+        slicer.util.pip_install("pandas")
+        import pandas as pd
+        print("✓ pandas installed successfully")
+    except Exception as e:
+        print(f"ERROR: Failed to install pandas: {e}")
+        print("Please install manually via Slicer's Python Interactor:")
+        print("  import slicer")
+        print("  slicer.util.pip_install('pandas')")
+        raise
 
+# Try to import openpyxl
 try:
     from openpyxl import Workbook, load_workbook
+    print("✓ openpyxl already installed")
 except ImportError:
-    slicer.util.pip_install("openpyxl")
-    from openpyxl import Workbook, load_workbook
+    print("Installing openpyxl...")
+    try:
+        slicer.util.pip_install("openpyxl")
+        from openpyxl import Workbook, load_workbook
+        print("✓ openpyxl installed successfully")
+    except Exception as e:
+        print(f"ERROR: Failed to install openpyxl: {e}")
+        print("Please install manually via Slicer's Python Interactor:")
+        print("  import slicer")
+        print("  slicer.util.pip_install('openpyxl')")
+        raise
 
 
 # --- Configure application settings ---
