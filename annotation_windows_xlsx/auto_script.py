@@ -85,7 +85,7 @@ def loadEverything():
         # Filter rows where deleted_at is empty or NaN (do not display deleted versions)
         active_markups = df[df['deleted_at'].isna()]
         print("Loading markup files...")
-        for filename in active_markups['filename']:
+        for filename in active_markups['new_filename']:
                 # Construct full path
                 markup_path = os.path.join(sourceFolder, filename)
                 if os.path.isfile(markup_path):
@@ -351,7 +351,7 @@ def onAppExit(caller=None, event=None):
     ws.title = "Markup Log"
 
     # Write header
-    ws.append(["filename", "report_content", "original_filename", "created_at", "deleted_at"])
+    ws.append(["new_filename", "report_content", "original_filename", "created_at", "deleted_at"])
 
     # Write data rows
     for filename, details in markup_log.items():
@@ -378,7 +378,7 @@ def onAppExit(caller=None, event=None):
         ws_error.title = "Markup Errors"
 
         # Write header including json_content
-        ws_error.append(["filename", "report_content", "original_filename", "created_at", "deleted_at", "json_content"])
+        ws_error.append(["new_filename", "report_content", "original_filename", "created_at", "deleted_at", "json_content"])
 
         for filename, details in markup_error.items():
             ws_error.append([
