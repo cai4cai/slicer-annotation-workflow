@@ -1,7 +1,13 @@
 annotation_mac/Slicer Installation/
 annotation_mac/patients/
+annotation_mac/log.csv
 annotation_windows/Slicer Installation/
 annotation_windows/patients/
+annotation_windows/log.csv
 annotation_mac_xlsx/patients/
 annotation_mac_xlsx/Slicer Installation/
 annotation_mac_xlsx/log.csv
+annotation_windows_xlsx/patients/
+annotation_windows_xlsx/Slicer Installation/
+annotation_windows_xlsx/log.csv
+.DS_Store
