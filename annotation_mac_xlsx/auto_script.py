@@ -121,6 +121,7 @@ for i in range(sliceNodes.GetNumberOfItems()):
 # --- Global references for UI components ---
 moduleDropdown = None
 customToolBar = None
+markupLogTable = None  # Reference to the editable markup log table
 
 # --- Add a module selection dropdown to the toolbar ---
 def addAllowedModuleDropdown(moduleToolBar, allowedModules=None):
@@ -228,8 +229,7 @@ def extract_markup_content(node):
 
 # --- Save markups, update logs, and clean UI on application exit ---
 def onAppExit(caller=None, event=None):
-    print("Slicer is closing. Cleaning up custom UI...")
-    cleanUpCustomUI()
+    global markupLogTable
 
     print("Slicer is closing. Saving all markups...")
 
@@ -260,6 +260,44 @@ def onAppExit(caller=None, event=None):
 
         wb.close()
 
+    # Update markup_log with any edits from the table (BEFORE cleaning up UI!)
+    print(f"DEBUG: markupLogTable is {'None' if markupLogTable is None else 'available'}")
+    if markupLogTable is not None:
+        try:
+            # Try to get row count (could be property or method depending on Qt version)
+            try:
+                row_count = markupLogTable.rowCount()
+            except TypeError:
+                row_count = markupLogTable.rowCount
+
+            print(f"Reading updates from editable markup log table (table has {row_count} rows)...")
+
+            for row_idx in range(row_count):
+                # Get filename from column 0
+                filename_item = markupLogTable.item(row_idx, 0)
+                # Get report_content from column 1
+                report_content_item = markupLogTable.item(row_idx, 1)
+
+                if filename_item and report_content_item:
+                    filename = filename_item.text()
+                    new_report_content = report_content_item.text()
+
+                    # Update markup_log if this file exists and content changed
+                    if filename in markup_log:
+                        old_report_content = str(markup_log[filename].get('report_content', ''))
+                        if new_report_content != old_report_content and new_report_content != 'nan':
+                            print(f"✓ Table edit detected for {filename}: '{old_report_content}' -> '{new_report_content}'")
+                            markup_log[filename]['report_content'] = new_report_content
+        except Exception as e:
+            print(f"ERROR: Failed to read table edits: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print("WARNING: markupLogTable is None - cannot read table edits")
+
+    print("Cleaning up custom UI...")
+    cleanUpCustomUI()
+
     # Get last number if any
     max_number = 0
     for markup in markup_log.keys():
@@ -275,13 +313,18 @@ def onAppExit(caller=None, event=None):
 
     for markupNode in final_markup_nodes:
         node_name = markupNode.GetName().strip()
+        print(f"DEBUG: Processing node with name='{node_name}'")
 
         # Check for existing
         existing_file = None
         for fname in markup_log.keys():
-            if fname.replace(".json", "") == node_name: 
+            if fname.replace(".json", "") == node_name:
                 existing_file = fname
+                print(f"DEBUG: Matched node '{node_name}' to file '{fname}'")
                 break
+
+        if not existing_file:
+            print(f"DEBUG: No existing file found for node '{node_name}'")
 
         if existing_file:
             safe_name = existing_file
@@ -304,9 +347,36 @@ def onAppExit(caller=None, event=None):
 
         try:
             if existing_file:
-                # Save markup
+                # Update the node's description from markup_log (in case it was edited in the table)
+                updated_report_content = markup_log[existing_file].get('report_content', '')
+                current_description = markupNode.GetDescription()
+
+                print(f"Processing {safe_name}: current_desc='{current_description}', new_desc='{updated_report_content}'")
+
+                # Save markup first
                 slicer.util.saveNode(markupNode, output_path)
                 print(f"Saved markup: {output_path}")
+
+                # Then load the JSON and update the description in all control points
+                if updated_report_content:
+                    try:
+                        with open(output_path, 'r') as f:
+                            markup_data = json.load(f)
+
+                        # Update the description in ALL control points
+                        if 'markups' in markup_data and len(markup_data['markups']) > 0:
+                            markup = markup_data['markups'][0]
+                            if 'controlPoints' in markup and len(markup['controlPoints']) > 0:
+                                # Set the same description on all control points
+                                for control_point in markup['controlPoints']:
+                                    control_point['description'] = updated_report_content
+
+                                # Save the updated JSON back to file
+                                with open(output_path, 'w') as f:
+                                    json.dump(markup_data, f, indent=4)
+                                print(f"  → Updated description in {len(markup['controlPoints'])} control point(s) to: '{updated_report_content}'")
+                    except Exception as json_error:
+                        print(f"  WARNING: Failed to update JSON description: {json_error}")
             # If not previously on markup_log then add
             else:
                 markupNode.SetDescription(node_name)
@@ -495,6 +565,7 @@ def show_report_dock(report_file_path, report_number):
 
 # --- Custom widget to display the correlation between markups and report content ---
 def show_excel_preview_dock(excel_path):
+    global markupLogTable
     mw = slicer.util.mainWindow()
 
     existingDock = mw.findChild(qt.QDockWidget, "ExcelPreviewDock")
@@ -509,13 +580,19 @@ def show_excel_preview_dock(excel_path):
     dockContents = qt.QWidget()
     dockLayout = qt.QVBoxLayout(dockContents)
 
+    # Add instruction label
+    instructionLabel = qt.QLabel("You can edit the 'report_content' column to update markup descriptions")
+    instructionLabel.setStyleSheet("font-style: italic; color: #666; padding: 5px;")
+    dockLayout.addWidget(instructionLabel)
+
     tableWidget = qt.QTableWidget()
+    markupLogTable = tableWidget  # Store global reference
     dockLayout.addWidget(tableWidget)
 
     if os.path.exists(excel_path):
         try:
             df = pd.read_excel(excel_path, engine='openpyxl')
-            df_preview = df.iloc[:, [0,1,3,4]]  # First two columns
+            df_preview = df.iloc[:, [0,1,3,4]]  # Columns: new_filename, report_content, created_at, deleted_at
 
             tableWidget.setColumnCount(len(df_preview.columns))
             tableWidget.setRowCount(len(df_preview))
@@ -525,9 +602,28 @@ def show_excel_preview_dock(excel_path):
 
             # Fill table cells
             for row_idx in range(len(df_preview)):
+                # Check if this row is deleted (deleted_at column is not empty)
+                deleted_at_value = df_preview.iat[row_idx, 3]  # Column 3 is deleted_at
+                is_deleted = deleted_at_value and str(deleted_at_value) != 'nan'
+
                 for col_idx in range(len(df_preview.columns)):
                     cell_value = str(df_preview.iat[row_idx, col_idx])
                     item = qt.QTableWidgetItem(cell_value)
+
+                    if is_deleted:
+                        # Deleted markups - make entire row non-editable and gray it out
+                        item.setFlags(qt.Qt.ItemIsEnabled | qt.Qt.ItemIsSelectable)
+                        item.setBackground(qt.QColor(220, 220, 220))  # Light gray background
+                        item.setForeground(qt.QColor(100, 100, 100))  # Dark gray text
+                    else:
+                        # Active markups - make only the report_content column (index 1) editable
+                        if col_idx == 1:
+                            # report_content column - keep editable
+                            item.setFlags(qt.Qt.ItemIsEditable | qt.Qt.ItemIsEnabled | qt.Qt.ItemIsSelectable)
+                        else:
+                            # Other columns - read only
+                            item.setFlags(qt.Qt.ItemIsEnabled | qt.Qt.ItemIsSelectable)
+
                     tableWidget.setItem(row_idx, col_idx, item)
 
             tableWidget.resizeColumnsToContents()
