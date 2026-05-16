@@ -7,8 +7,25 @@ from qt import QTimer
 import datetime
 import json
 import glob
-import errno
+
 import re
+
+# Try to import openpyxl (must be installed before pandas needs it for read_excel)
+try:
+    from openpyxl import Workbook, load_workbook
+    print("✓ openpyxl already installed")
+except ImportError:
+    print("Installing openpyxl...")
+    try:
+        slicer.util.pip_install("openpyxl")
+        from openpyxl import Workbook, load_workbook
+        print("✓ openpyxl installed successfully")
+    except Exception as e:
+        print(f"ERROR: Failed to install openpyxl: {e}")
+        print("Please install manually via Slicer's Python Interactor:")
+        print("  import slicer")
+        print("  slicer.util.pip_install('openpyxl')")
+        raise
 
 # Try to import pandas
 try:
@@ -25,23 +42,6 @@ except ImportError:
         print("Please install manually via Slicer's Python Interactor:")
         print("  import slicer")
         print("  slicer.util.pip_install('pandas')")
-        raise
-
-# Try to import openpyxl
-try:
-    from openpyxl import Workbook, load_workbook
-    print("✓ openpyxl already installed")
-except ImportError:
-    print("Installing openpyxl...")
-    try:
-        slicer.util.pip_install("openpyxl")
-        from openpyxl import Workbook, load_workbook
-        print("✓ openpyxl installed successfully")
-    except Exception as e:
-        print(f"ERROR: Failed to install openpyxl: {e}")
-        print("Please install manually via Slicer's Python Interactor:")
-        print("  import slicer")
-        print("  slicer.util.pip_install('openpyxl')")
         raise
 
 
@@ -121,7 +121,7 @@ for i in range(sliceNodes.GetNumberOfItems()):
 # --- Global references for UI components ---
 moduleDropdown = None
 customToolBar = None
-markupLogTable = None  # Reference to the editable markup log table
+markupLogTable = None  # Reference to the markup log table
 
 # --- Add a module selection dropdown to the toolbar ---
 def addAllowedModuleDropdown(moduleToolBar, allowedModules=None):
@@ -260,41 +260,6 @@ def onAppExit(caller=None, event=None):
 
         wb.close()
 
-    # Update markup_log with any edits from the table (BEFORE cleaning up UI!)
-    print(f"DEBUG: markupLogTable is {'None' if markupLogTable is None else 'available'}")
-    if markupLogTable is not None:
-        try:
-            # Try to get row count (could be property or method depending on Qt version)
-            try:
-                row_count = markupLogTable.rowCount()
-            except TypeError:
-                row_count = markupLogTable.rowCount
-
-            print(f"Reading updates from editable markup log table (table has {row_count} rows)...")
-
-            for row_idx in range(row_count):
-                # Get filename from column 0
-                filename_item = markupLogTable.item(row_idx, 0)
-                # Get report_content from column 1
-                report_content_item = markupLogTable.item(row_idx, 1)
-
-                if filename_item and report_content_item:
-                    filename = filename_item.text()
-                    new_report_content = report_content_item.text()
-
-                    # Update markup_log if this file exists and content changed
-                    if filename in markup_log:
-                        old_report_content = str(markup_log[filename].get('report_content', ''))
-                        if new_report_content != old_report_content and new_report_content != 'nan':
-                            print(f"✓ Table edit detected for {filename}: '{old_report_content}' -> '{new_report_content}'")
-                            markup_log[filename]['report_content'] = new_report_content
-        except Exception as e:
-            print(f"ERROR: Failed to read table edits: {e}")
-            import traceback
-            traceback.print_exc()
-    else:
-        print("WARNING: markupLogTable is None - cannot read table edits")
-
     print("Cleaning up custom UI...")
     cleanUpCustomUI()
 
@@ -347,7 +312,6 @@ def onAppExit(caller=None, event=None):
 
         try:
             if existing_file:
-                # Update the node's description from markup_log (in case it was edited in the table)
                 updated_report_content = markup_log[existing_file].get('report_content', '')
                 current_description = markupNode.GetDescription()
 
@@ -399,8 +363,8 @@ def onAppExit(caller=None, event=None):
                         'json_content': extract_markup_content(markupNode)
                     }
             
-    # Detect deleted markups from log
-    saved_filenames = set(markup_log.keys())
+    # Detect deleted markups from log (only consider active entries)
+    saved_filenames = {k for k, v in markup_log.items() if not v.get('deleted_at')}
     deleted_files = saved_filenames - current_filenames
 
     for deleted_file in deleted_files:
@@ -433,8 +397,8 @@ def onAppExit(caller=None, event=None):
             details.get('deleted_at', '')
         ])
 
-        # Save to file
-        wb.save(markup_log_file)
+    # Save to file
+    wb.save(markup_log_file)
     
     # Create markup error log with content
     if markup_error:
@@ -490,10 +454,11 @@ def hideAllGUIComponents():
     # Hide Error log
     mw.errorLogDockWidget().setVisible(False)
 
-    # Hide module panel title bar
+    # Hide module panel title bar but keep the panel visible
     modulePanelDockWidgets = mw.findChildren(qt.QDockWidget, "PanelDockWidget")
     for dock in modulePanelDockWidgets:
         dock.setTitleBarWidget(qt.QWidget(dock))
+        dock.setVisible(True)
 
     # Hide Help section
     modulePanel = findChild(mw, "ModulePanel")
@@ -551,7 +516,7 @@ def show_report_dock(report_file_path, report_number):
     textBrowser.setReadOnly(True)
     textBrowser.setStyleSheet("background-color: #f0f0f0; font-size:14px")
 
-    if os.path.exists(report_file_path):
+    if report_file_path and os.path.exists(report_file_path):
         with open(report_file_path, 'r') as f:
             textBrowser.setPlainText(f.read())
     else:
@@ -560,6 +525,7 @@ def show_report_dock(report_file_path, report_number):
     dockLayout.addWidget(textBrowser)
 
     dockWidget.setWidget(dockContents)
+    dockWidget.setMaximumWidth(340)
     mw.addDockWidget(qt.Qt.RightDockWidgetArea, dockWidget)
     dockWidget.show()
 
@@ -581,7 +547,7 @@ def show_excel_preview_dock(excel_path):
     dockLayout = qt.QVBoxLayout(dockContents)
 
     # Add instruction label
-    instructionLabel = qt.QLabel("You can edit the 'report_content' column to update markup descriptions")
+    instructionLabel = qt.QLabel("Overview of markup annotations and their descriptions")
     instructionLabel.setStyleSheet("font-style: italic; color: #666; padding: 5px;")
     dockLayout.addWidget(instructionLabel)
 
@@ -610,19 +576,13 @@ def show_excel_preview_dock(excel_path):
                     cell_value = str(df_preview.iat[row_idx, col_idx])
                     item = qt.QTableWidgetItem(cell_value)
 
+                    # Make all cells read-only
+                    item.setFlags(qt.Qt.ItemIsEnabled | qt.Qt.ItemIsSelectable)
+
                     if is_deleted:
-                        # Deleted markups - make entire row non-editable and gray it out
-                        item.setFlags(qt.Qt.ItemIsEnabled | qt.Qt.ItemIsSelectable)
+                        # Deleted markups - gray them out
                         item.setBackground(qt.QColor(220, 220, 220))  # Light gray background
                         item.setForeground(qt.QColor(100, 100, 100))  # Dark gray text
-                    else:
-                        # Active markups - make only the report_content column (index 1) editable
-                        if col_idx == 1:
-                            # report_content column - keep editable
-                            item.setFlags(qt.Qt.ItemIsEditable | qt.Qt.ItemIsEnabled | qt.Qt.ItemIsSelectable)
-                        else:
-                            # Other columns - read only
-                            item.setFlags(qt.Qt.ItemIsEnabled | qt.Qt.ItemIsSelectable)
 
                     tableWidget.setItem(row_idx, col_idx, item)
 
@@ -636,6 +596,7 @@ def show_excel_preview_dock(excel_path):
         dockLayout.addWidget(error_label)
 
     dockWidget.setWidget(dockContents)
+    dockWidget.setMaximumWidth(340)
     mw.addDockWidget(qt.Qt.RightDockWidgetArea, dockWidget)
     dockWidget.show()
 
@@ -650,6 +611,14 @@ if report_files:
 else:
     report_file_path = None  # or raise an error / handle missing file
 
+# --- Ensure module panel is visible after all initialisation ---
+def ensureModulePanelVisible():
+    mw = slicer.util.mainWindow()
+    if mw:
+        for dock in mw.findChildren(qt.QDockWidget, "PanelDockWidget"):
+            dock.setVisible(True)
+        slicer.util.selectModule('Data')
+
 # --- Bind exit event and initialise app ---
 slicer.app.connect("aboutToQuit()", onAppExit)
 QTimer.singleShot(50, hideAllGUIComponents)
@@ -657,4 +626,5 @@ QTimer.singleShot(100, loadEverything)
 QTimer.singleShot(150, initialiseCustomUI)
 QTimer.singleShot(200, lambda: show_report_dock(report_file_path, args.report_number))
 QTimer.singleShot(250, lambda: show_excel_preview_dock(markup_log_file))
+QTimer.singleShot(300, ensureModulePanelVisible)
 

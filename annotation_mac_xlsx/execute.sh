@@ -37,9 +37,17 @@ if [ ! -f "$SLICER_EXECUTABLE" ]; then
     exit 1
 fi
 
-# Find files and create comma-separated lists
-NIFTI_FILES=$(find "$SESSION_FOLDER" -maxdepth 1 -type f \( -iname "*.nii" -o -iname "*.nii.gz" \) | tr '\n' ' ')
-MARKUP_FILES=$(find "$SESSION_FOLDER" -maxdepth 1 -type f -iname "*.json" | tr '\n' ' ')
+# Find files and store in arrays (handles spaces in paths)
+NIFTI_FILES=()
+while IFS= read -r -d '' f; do
+    NIFTI_FILES+=("$f")
+done < <(find "$SESSION_FOLDER" -maxdepth 1 -type f \( -iname "*.nii" -o -iname "*.nii.gz" \) -print0)
+
+MARKUP_FILES=()
+while IFS= read -r -d '' f; do
+    MARKUP_FILES+=("$f")
+done < <(find "$SESSION_FOLDER" -maxdepth 1 -type f -iname "*.json" -print0)
+
 TEXT_FILE=$(find "$SESSION_FOLDER" -maxdepth 1 -type f -iname "*.txt" | head -n 1)
 
 # Print arguments parse later
@@ -55,12 +63,12 @@ TEXT_FILE=$(find "$SESSION_FOLDER" -maxdepth 1 -type f -iname "*.txt" | head -n 
 # "$SLICER_EXECUTABLE" --disable-modules=All --enable-modules=Data,Markups,Volumes --help
 # Launch Slicer with auto_script.py and parameters
 # IGNORE_MODULES="Annotations,Models,Transforms,Editor"
-set "IGNORE_MODULES=Annotations,Models,Transforms,Editor,AtlasTests,BRAINSDWICleanup,BRAINSDeface,BRAINSFit,BRAINSFitRigidRegistrationCrashIssue4139,BRAINSIntensityNormalize,BRAINSROIAuto,BRAINSResample,BRAINSResize,BRAINSStripRotation,BRAINSTransformConvert,Cameras,CastScalarVolume,CheckerBoardFilter,ColorLegendSelfTest,CompareVolumes,CreateDICOMSeries,CurvatureAnisotropicDiffusion,Decimation,DWIConvert,Endoscopy,EventBroker,ExecutionModelTour,ExtensionWizard,ExtractSkeleton,FiducialLayoutSwitchBug1914,FiducialRegistration,GaussianBlurImageFilter,GradientAnisotropicDiffusion,GrayscaleFillHoleImageFilter,GrayscaleGrindPeakImageFilter,GrayscaleModelMaker,HistogramMatching,ImageLabelCombine,ImportItkSnapLabel,JRC2013Vis,LabelMapSmoothing,LandmarkRegistration,MedianImageFilter,MergeModels,ModelMaker,ModelToLabelMap,MultiplyScalarVolumes,N4ITKBiasFieldCorrection,NeurosurgicalPlanningTutorialMarkupsSelfTest,OrientScalarVolume,PETStandardUptakeValueComputation,PerformMetricTest,PerformanceTests,Plots,PlotsSelfTest,PluggableMarkupsSelfTest,ProbeVolumeWithModel,Reformat,ResampleDTIVolume,ResampleScalarVolume,RobustStatisticsSegmenter,RSNA2012ProstateDemo,RSNAQuantTutorial,RSNAVisTutorial,SampleData,ScenePerformance,SceneViews,ScreenCapture,SegmentEditor,SegmentStatistics,SelfTests,Sequences,SequencesSelfTest,ShaderProperties,SimpleFilters,SimpleRegionGrowingSegmentation,Slicer4Minute,SlicerBoundsTest,SlicerDisplayNodeSequenceTest,SlicerMRBMultipleSaveRestoreLoopTest,SlicerMRBMultipleSaveRestoreTest,SlicerMRBSaveRestoreCheckPathsTest,SlicerOrientationSelectorTest,SlicerScriptedFileReaderWriterTest,SliceLinkLogic,SubtractScalarVolumes,SurfaceToolbox,Tables,TablesSelfTest,Texts,ThresholdScalarVolume,UtilTest,VectorToScalarVolume,ViewControllers,ViewControllersSliceInterpolationBug1926,VolumeRendering,VolumeRenderingSceneClose,VotingBinaryHoleFillingImageFilter,WebEngine,WebServer,Welcome"
+IGNORE_MODULES="Annotations,Models,Transforms,Editor,AtlasTests,BRAINSDWICleanup,BRAINSDeface,BRAINSFit,BRAINSFitRigidRegistrationCrashIssue4139,BRAINSIntensityNormalize,BRAINSROIAuto,BRAINSResample,BRAINSResize,BRAINSStripRotation,BRAINSTransformConvert,CastScalarVolume,CheckerBoardFilter,ColorLegendSelfTest,CompareVolumes,CreateDICOMSeries,CurvatureAnisotropicDiffusion,Decimation,DWIConvert,Endoscopy,EventBroker,ExecutionModelTour,ExtensionWizard,ExtractSkeleton,FiducialLayoutSwitchBug1914,FiducialRegistration,GaussianBlurImageFilter,GradientAnisotropicDiffusion,GrayscaleFillHoleImageFilter,GrayscaleGrindPeakImageFilter,GrayscaleModelMaker,HistogramMatching,ImageLabelCombine,ImportItkSnapLabel,JRC2013Vis,LabelMapSmoothing,LandmarkRegistration,MedianImageFilter,MergeModels,ModelMaker,ModelToLabelMap,MultiplyScalarVolumes,N4ITKBiasFieldCorrection,NeurosurgicalPlanningTutorialMarkupsSelfTest,OrientScalarVolume,PETStandardUptakeValueComputation,PerformMetricTest,PerformanceTests,Plots,PlotsSelfTest,PluggableMarkupsSelfTest,ProbeVolumeWithModel,Reformat,ResampleDTIVolume,ResampleScalarVolume,RobustStatisticsSegmenter,RSNA2012ProstateDemo,RSNAQuantTutorial,RSNAVisTutorial,SampleData,ScenePerformance,SceneViews,ScreenCapture,SegmentEditor,SegmentStatistics,SelfTests,Sequences,SequencesSelfTest,ShaderProperties,SimpleFilters,SimpleRegionGrowingSegmentation,Slicer4Minute,SlicerBoundsTest,SlicerDisplayNodeSequenceTest,SlicerMRBMultipleSaveRestoreLoopTest,SlicerMRBMultipleSaveRestoreTest,SlicerMRBSaveRestoreCheckPathsTest,SlicerOrientationSelectorTest,SlicerScriptedFileReaderWriterTest,SliceLinkLogic,SubtractScalarVolumes,SurfaceToolbox,Tables,TablesSelfTest,Texts,ThresholdScalarVolume,UtilTest,VectorToScalarVolume,ViewControllers,ViewControllersSliceInterpolationBug1926,VolumeRendering,VolumeRenderingSceneClose,VotingBinaryHoleFillingImageFilter,WebEngine,WebServer,Welcome"
 
 "$SLICER_EXECUTABLE" --modules-to-ignore "$IGNORE_MODULES" --python-script "$SCRIPT_DIR/auto_script.py" -- \
     --source_folder "$SESSION_FOLDER" \
-    --nifti_files $NIFTI_FILES \
-    --markup_files $MARKUP_FILES \
+    --nifti_files "${NIFTI_FILES[@]}" \
+    --markup_files "${MARKUP_FILES[@]}" \
     --report_number "$REPORT_NUMBER" \
     --log_csv "$CSV_FILE"
 
