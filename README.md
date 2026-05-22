@@ -9,14 +9,14 @@ Download and install **3D Slicer 5.8.1**.
 
 This repository contains **four annotation workflow versions**:
 
-| Folder | Platform | Log Format | Features |
-|--------|----------|------------|----------|
-| `annotation_mac/` | macOS | CSV | Basic markup logging |
-| `annotation_mac_xlsx/` | macOS | Excel | Advanced tracking with markup log table UI |
-| `annotation_windows/` | Windows | CSV | Basic markup logging |
-| `annotation_windows_xlsx/` | Windows | Excel | Advanced tracking with markup log table UI |
+| Folder | Platform | Features |
+|--------|----------|----------|
+| `annotation_mac/` | macOS | Basic markup logging with filename encoding |
+| `annotation_mac_xlsx/` | macOS | Advanced tracking with report content descriptions |
+| `annotation_windows/` | Windows | Basic markup logging with filename encoding |
+| `annotation_windows_xlsx/` | Windows | Advanced tracking with report content descriptions |
 
-**Recommended**: Use the **Excel versions** (`*_xlsx`) for better markup tracking and visualization.
+**Recommended**: Use the `*_xlsx` versions for better markup-to-report tracking. All versions use CSV-based logging with no external dependencies.
 
 ### 3. Run the Annotation Launcher
 Navigate to your chosen workflow folder and use the appropriate script:
@@ -75,27 +75,27 @@ After annotating each case:
 - Open the `log.csv` file located in your workflow directory.
 - Update the **Done** column for each completed case.
 
-**Excel Versions Only**: Markup details are automatically tracked in `markup_log.xlsx` within each patient's scanning session folder, showing:
-- Filename and original markup name
+**`*_xlsx` Versions Only**: Markup details are automatically tracked in `markup_log.csv` within each patient's scanning session folder, showing:
+- Filename and report content description (from markup name)
 - Creation and deletion timestamps
-- Visual table in Slicer UI showing markup-to-report correlation
+- Report content is also embedded in each markup JSON's control point descriptions
 
 ---
 
-## Differences Between CSV and Excel Versions
+## Differences Between Workflow Versions
 
 ### CSV Versions (`annotation_mac/`, `annotation_windows/`)
-- ✅ No additional dependencies
-- ✅ Simpler, lightweight
-- ❌ Basic markup tracking
-- Uses filename encoding for special characters
+- No additional dependencies
+- Simpler, lightweight
+- Basic markup tracking using filename encoding for special characters
 
-### Excel Versions (`annotation_mac_xlsx/`, `annotation_windows_xlsx/`)
-- ✅ Advanced markup tracking with full history
-- ✅ Markup log table displayed in Slicer UI
-- ✅ Better correlation between markups and report content
-- ✅ Automatic filtering of deleted markups
-- ⚙️ Auto-installs pandas and openpyxl on first run
+### `*_xlsx` Versions (`annotation_mac_xlsx/`, `annotation_windows_xlsx/`)
+- No additional dependencies (uses Python stdlib only)
+- Advanced markup tracking with full history in `markup_log.csv`
+- Correlates markups with report content (annotator renames markups to report sentences)
+- Report descriptions embedded in markup JSON control point descriptions
+- Safe deletion detection (only deletes markups that loaded successfully)
+- Auto-numbered filenames by markup type (`point_1.json`, `line_2.json`, `roi_3.json`)
 
 ---
 
