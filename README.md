@@ -222,7 +222,7 @@ If you use this tool in your research, please cite:
   title        = {Slicer Annotation Workflow},
   year         = {2026},
   version      = {1.0.0},
-  url          = {https://github.com/LorenaGarcia-Foncillas/slicer-annotation-workflow},
+  url          = {https://github.com/cai4cai/slicer-annotation-workflow},
   license      = {Apache-2.0}
 }
 ```

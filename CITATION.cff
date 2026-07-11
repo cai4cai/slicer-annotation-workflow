@@ -7,8 +7,7 @@ authors:
     family-names: Garcia-Foncillas Macias
     email: lorena.garcia-foncillas_macias@kcl.ac.uk
     affiliation: King's College London
-    # orcid: "https://orcid.org/0000-0000-0000-0000"  # TODO: add your ORCID
-repository-code: "https://github.com/LorenaGarcia-Foncillas/slicer-annotation-workflow"
+repository-code: "https://github.com/cai4cai/slicer-annotation-workflow"
 license: Apache-2.0
 version: "1.0.0"
 date-released: "2026-07-11"
