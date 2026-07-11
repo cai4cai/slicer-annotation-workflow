@@ -129,6 +129,8 @@ These security steps only need to be done once.
    - **Middle panel**: three cross-sectional viewers (Red = Axial, Yellow = Sagittal, Green = Coronal)
    - **Right panel**: the radiology report text
 
+![Annotation GUI](Annotation_GUI.svg)
+
 ### Navigating Slices
 
 - **Mouse scroll wheel**: hover over a viewer and scroll up/down
