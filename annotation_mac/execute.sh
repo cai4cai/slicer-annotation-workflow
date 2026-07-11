@@ -43,31 +43,11 @@ if [ ! -d "$SESSION_FOLDER" ]; then
 fi
 
 # --- Locate the Slicer executable ---
-# On macOS: standard Applications path
-# On Linux: check home directory or current directory for Slicer installation
-OS_TYPE=$(uname)
+SLICER_EXECUTABLE="/Applications/Slicer.app/Contents/MacOS/Slicer"
 
-if [ "$OS_TYPE" == "Darwin" ]; then
-    SLICER_EXECUTABLE="/Applications/Slicer.app/Contents/MacOS/Slicer"
-else
-    # Search for any installed Slicer version
-    SLICER_EXECUTABLE=""
-    for d in "$HOME"/.local/Slicer-*-linux-amd64; do
-        if [ -f "$d/Slicer" ]; then
-            SLICER_EXECUTABLE="$d/Slicer"
-        fi
-    done
-    if [ -z "$SLICER_EXECUTABLE" ]; then
-        for d in ./Slicer-*-linux-amd64; do
-            if [ -f "$d/Slicer" ]; then
-                SLICER_EXECUTABLE="$(realpath "$d/Slicer")"
-            fi
-        done
-    fi
-fi
-
-if [ -z "$SLICER_EXECUTABLE" ] || [ ! -f "$SLICER_EXECUTABLE" ]; then
-    echo "Error: No Slicer installation found."
+if [ ! -f "$SLICER_EXECUTABLE" ]; then
+    echo "Error: Slicer not found at $SLICER_EXECUTABLE"
+    echo "Please install 3D Slicer from https://download.slicer.org"
     exit 1
 fi
 
