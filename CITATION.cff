@@ -11,7 +11,7 @@ repository-code: "https://github.com/cai4cai/slicer-annotation-workflow"
 license: Apache-2.0
 version: "1.0.0"
 date-released: "2026-07-11"
-# doi: ""  # TODO: add Zenodo DOI after archiving
+doi: "10.5281/zenodo.21312379"
 keywords:
   - medical imaging
   - annotation

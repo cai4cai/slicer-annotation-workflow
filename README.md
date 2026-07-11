@@ -2,6 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0-green.svg)]()
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21312379.svg)](https://doi.org/10.5281/zenodo.21312379)
 
 A system for annotating medical imaging data (NIfTI files) based on radiology reports using [3D Slicer](https://www.slicer.org/). Annotators create markups (Points, ROIs, Lines) on brain scans to localise findings described in reports.
 
@@ -222,7 +223,8 @@ If you use this tool in your research, please cite:
   title        = {Slicer Annotation Workflow},
   year         = {2026},
   version      = {1.0.0},
-  url          = {https://github.com/cai4cai/slicer-annotation-workflow},
+  doi          = {10.5281/zenodo.21312379},
+  url          = {https://doi.org/10.5281/zenodo.21312379},
   license      = {Apache-2.0}
 }
 ```
