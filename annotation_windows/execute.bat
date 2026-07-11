@@ -1,9 +1,21 @@
 @echo off
 setlocal enabledelayedexpansion
+:: =============================================================================
+:: execute.bat — Finds patient data and launches 3D Slicer with auto_script.py
+::
+:: Usage: execute.bat <report_number>
+::
+:: This script:
+::   1. Looks up the report number in log.csv to find the patient session folder
+::   2. Locates the Slicer executable (Windows default install path)
+::   3. Scans the session folder for NIfTI volumes and markup JSON files
+::   4. Launches Slicer with most modules disabled, passing auto_script.py
+::      and all discovered files as command-line arguments
+:: =============================================================================
 
-:: Check argument count
+:: --- Validate arguments ---
 if "%~1"=="" (
-    echo Usage: launch_annotation.bat ^<report_number^>
+    echo Usage: execute.bat ^<report_number^>
     exit /b 1
 )
 
@@ -11,16 +23,19 @@ set "REPORT_NUMBER=%~1"
 set "CSV_FILE=log.csv"
 set "SCRIPT_DIR=%~dp0"
 
-:: Check if CSV file exists
+:: --- Check that the progress log exists ---
 if not exist "%CSV_FILE%" (
     echo Error: %CSV_FILE% not found.
     exit /b 1
 )
 
+:: --- Look up the session folder for this report number in log.csv ---
+:: Copy to temp file to avoid file locking issues when reading
 set "TEMP_CSV=%TEMP%\temp_log.csv"
 copy /y "%CSV_FILE%" "%TEMP_CSV%" >nul
 
-:: Now read from the copy
+:: Parse CSV: find the row where column 1 matches the report number,
+:: extract column 2 (the session folder path)
 set "SESSION_FOLDER="
 for /f "tokens=1,2 delims=," %%A in (%TEMP_CSV%) do (
     if "%%A"=="%REPORT_NUMBER%" (
@@ -28,7 +43,7 @@ for /f "tokens=1,2 delims=," %%A in (%TEMP_CSV%) do (
     )
 )
 
-:: Delete the temporary copy
+:: Clean up the temporary copy
 del "%TEMP_CSV%"
 
 if "%SESSION_FOLDER%"=="" (
@@ -36,39 +51,45 @@ if "%SESSION_FOLDER%"=="" (
     exit /b 1
 )
 
-:: Define Slicer executable path
-set "SLICER_EXECUTABLE=%LOCALAPPDATA%\slicer.org\Slicer 5.8.1\Slicer.exe"
-
-if not exist "%SLICER_EXECUTABLE%" (
-    echo Error: Slicer executable not found at %SLICER_EXECUTABLE%
+if not exist "%SESSION_FOLDER%\" (
+    echo Error: Session folder not found: %SESSION_FOLDER%
     exit /b 1
 )
 
-:: Find NIfTI files
+:: --- Locate the Slicer executable ---
+:: Search for any installed Slicer version under %LOCALAPPDATA%\slicer.org\
+set "SLICER_EXECUTABLE="
+for /d %%D in ("%LOCALAPPDATA%\slicer.org\Slicer *") do (
+    if exist "%%D\Slicer.exe" set "SLICER_EXECUTABLE=%%D\Slicer.exe"
+)
+
+if "%SLICER_EXECUTABLE%"=="" (
+    echo Error: No Slicer installation found in %LOCALAPPDATA%\slicer.org\
+    exit /b 1
+)
+
+:: --- Scan the session folder for data files ---
+
+:: Find all NIfTI volumes (skip macOS resource fork files starting with "._")
 set "NIFTI_FILES="
 for %%F in ("%SESSION_FOLDER%\*.nii" "%SESSION_FOLDER%\*.nii.gz") do (
-    set "NIFTI_FILES=!NIFTI_FILES! "%%F""
+    set "_FNAME=%%~nxF"
+    if not "!_FNAME:~0,2!"=="._" set "NIFTI_FILES=!NIFTI_FILES! "%%F""
 )
 
-:: Find Markup files
+:: Find all markup JSON files (skip macOS resource fork files starting with "._")
 set "MARKUP_FILES="
 for %%F in ("%SESSION_FOLDER%\*.json") do (
-    set "MARKUP_FILES=!MARKUP_FILES! "%%F""
+    set "_FNAME=%%~nxF"
+    if not "!_FNAME:~0,2!"=="._" set "MARKUP_FILES=!MARKUP_FILES! "%%F""
 )
 
-:: Find first text file
-set "TEXT_FILE="
-for %%F in ("%SESSION_FOLDER%\*.txt") do (
-    set "TEXT_FILE=%%F"
-    goto :found_text
-)
-:found_text
+:: --- Launch Slicer ---
+:: Disable most modules to simplify the UI for annotators.
+:: Only Data, Markups, and Volumes are accessible via the custom toolbar dropdown.
+:: auto_script.py runs inside Slicer and handles loading, UI setup, and saving.
+set "IGNORE_MODULES=Annotations,Models,Transforms,Editor,AtlasTests,BRAINSDWICleanup,BRAINSDeface,BRAINSFit,BRAINSFitRigidRegistrationCrashIssue4139,BRAINSIntensityNormalize,BRAINSROIAuto,BRAINSResample,BRAINSResize,BRAINSStripRotation,BRAINSTransformConvert,CastScalarVolume,CheckerBoardFilter,ColorLegendSelfTest,CompareVolumes,CreateDICOMSeries,CurvatureAnisotropicDiffusion,Decimation,DWIConvert,Endoscopy,EventBroker,ExecutionModelTour,ExtensionWizard,ExtractSkeleton,FiducialLayoutSwitchBug1914,FiducialRegistration,GaussianBlurImageFilter,GradientAnisotropicDiffusion,GrayscaleFillHoleImageFilter,GrayscaleGrindPeakImageFilter,GrayscaleModelMaker,HistogramMatching,ImageLabelCombine,ImportItkSnapLabel,JRC2013Vis,LabelMapSmoothing,LandmarkRegistration,MedianImageFilter,MergeModels,ModelMaker,ModelToLabelMap,MultiplyScalarVolumes,N4ITKBiasFieldCorrection,NeurosurgicalPlanningTutorialMarkupsSelfTest,OrientScalarVolume,PETStandardUptakeValueComputation,PerformMetricTest,PerformanceTests,Plots,PlotsSelfTest,PluggableMarkupsSelfTest,ProbeVolumeWithModel,Reformat,ResampleDTIVolume,ResampleScalarVolume,RobustStatisticsSegmenter,RSNA2012ProstateDemo,RSNAQuantTutorial,RSNAVisTutorial,SampleData,ScenePerformance,SceneViews,ScreenCapture,SegmentEditor,SegmentStatistics,SelfTests,Sequences,SequencesSelfTest,ShaderProperties,SimpleFilters,SimpleRegionGrowingSegmentation,Slicer4Minute,SlicerBoundsTest,SlicerDisplayNodeSequenceTest,SlicerMRBMultipleSaveRestoreLoopTest,SlicerMRBMultipleSaveRestoreTest,SlicerMRBSaveRestoreCheckPathsTest,SlicerOrientationSelectorTest,SlicerScriptedFileReaderWriterTest,SliceLinkLogic,SubtractScalarVolumes,SurfaceToolbox,Tables,TablesSelfTest,Texts,ThresholdScalarVolume,UtilTest,VectorToScalarVolume,ViewControllers,ViewControllersSliceInterpolationBug1926,VolumeRendering,VolumeRenderingSceneClose,VotingBinaryHoleFillingImageFilter,WebEngine,WebServer,Welcome"
 
-:: Module ignore list to match Bash
-set "IGNORE_MODULES=Annotations,Models,Transforms,Editor"
-:: set "IGNORE_MODULES=Annotations,Models,Transforms,Editor,AtlasTests,BRAINSDWICleanup,BRAINSDeface,BRAINSFit,BRAINSFitRigidRegistrationCrashIssue4139,BRAINSIntensityNormalize,BRAINSROIAuto,BRAINSResample,BRAINSResize,BRAINSStripRotation,BRAINSTransformConvert,Cameras,CastScalarVolume,CheckerBoardFilter,ColorLegendSelfTest,CompareVolumes,CreateDICOMSeries,CurvatureAnisotropicDiffusion,Decimation,DWIConvert,Endoscopy,EventBroker,ExecutionModelTour,ExtensionWizard,ExtractSkeleton,FiducialLayoutSwitchBug1914,FiducialRegistration,GaussianBlurImageFilter,GradientAnisotropicDiffusion,GrayscaleFillHoleImageFilter,GrayscaleGrindPeakImageFilter,GrayscaleModelMaker,HistogramMatching,ImageLabelCombine,ImportItkSnapLabel,JRC2013Vis,LabelMapSmoothing,LandmarkRegistration,MedianImageFilter,MergeModels,ModelMaker,ModelToLabelMap,MultiplyScalarVolumes,N4ITKBiasFieldCorrection,NeurosurgicalPlanningTutorialMarkupsSelfTest,OrientScalarVolume,PETStandardUptakeValueComputation,PerformMetricTest,PerformanceTests,Plots,PlotsSelfTest,PluggableMarkupsSelfTest,ProbeVolumeWithModel,Reformat,ResampleDTIVolume,ResampleScalarVolume,RobustStatisticsSegmenter,RSNA2012ProstateDemo,RSNAQuantTutorial,RSNAVisTutorial,SampleData,ScenePerformance,SceneViews,ScreenCapture,SegmentEditor,SegmentStatistics,SelfTests,Sequences,SequencesSelfTest,ShaderProperties,SimpleFilters,SimpleRegionGrowingSegmentation,Slicer4Minute,SlicerBoundsTest,SlicerDisplayNodeSequenceTest,SlicerMRBMultipleSaveRestoreLoopTest,SlicerMRBMultipleSaveRestoreTest,SlicerMRBSaveRestoreCheckPathsTest,SlicerOrientationSelectorTest,SlicerScriptedFileReaderWriterTest,SliceLinkLogic,SubtractScalarVolumes,SurfaceToolbox,Tables,TablesSelfTest,Texts,ThresholdScalarVolume,UtilTest,VectorToScalarVolume,ViewControllers,ViewControllersSliceInterpolationBug1926,VolumeRendering,VolumeRenderingSceneClose,VotingBinaryHoleFillingImageFilter,WebEngine,WebServer,Welcome"
-
-:: Launch Slicer with auto_script.py and parameters including module ignore
 "%SLICER_EXECUTABLE%" --modules-to-ignore "%IGNORE_MODULES%" --python-script "%SCRIPT_DIR%auto_script.py" -- ^
     --source_folder "%SESSION_FOLDER%" ^
     --nifti_files %NIFTI_FILES% ^

@@ -1,5 +1,6 @@
 Report,Path,Done
-13,./patients/patient1/scanning_session1,
-17,./patients/patient1/scanning_session2,
-418,./patients/patient2/scanning_session1,
-421,./patients/patient2/scanning_session2,
+1,./patients/patient1/scanning_session1,
+2,./patients/patient1/scanning_session2,
+3,./patients/patient2/scanning_session1,
+4,./patients/patient2/scanning_session2,
+5,./patients/patient3/scanning_session1,
