@@ -1,6 +1,11 @@
 # Slicer Annotation Workflow
 
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)]()
+
 A system for annotating medical imaging data (NIfTI files) based on radiology reports using [3D Slicer](https://www.slicer.org/). Annotators create markups (Points, ROIs, Lines) on brain scans to localise findings described in reports.
+
+> **Note:** This repository contains only the annotation tool and workflow scripts. No patient data, medical images, or radiology reports are included in this repository.
 
 > We recommend using a mouse for easier navigation and annotation.
 
@@ -197,6 +202,36 @@ Your annotations are **automatically saved** when you close Slicer — there is 
 
 - **Do not keep `markup_log.csv` open** while Slicer is running. Windows locks files opened in Excel, which prevents the script from updating the log.
 
+
+---
+
+## Requirements
+
+- **3D Slicer** >= 5.8.1 ([download](https://download.slicer.org))
+- No additional Python packages — the scripts use only Slicer's built-in Python and the standard library.
+
+---
+
+## Citation
+
+If you use this tool in your research, please cite:
+
+```bibtex
+@software{garcia_foncillas_2026_slicer_annotation,
+  author       = {Garcia-Foncillas Macias, Lorena},
+  title        = {Slicer Annotation Workflow},
+  year         = {2026},
+  version      = {1.0.0},
+  url          = {https://github.com/LorenaGarcia-Foncillas/slicer-annotation-workflow},
+  license      = {Apache-2.0}
+}
+```
+
+---
+
+## License
+
+This project is licensed under the Apache License 2.0 — see [LICENSE](LICENSE) for details.
 
 ---
 
