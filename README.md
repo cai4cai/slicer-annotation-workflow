@@ -219,10 +219,14 @@ If you use this tool in your research, please cite:
 
 ```bibtex
 @software{garcia_foncillas_2026_slicer_annotation,
-  author       = {Garcia-Foncillas Macias, Lorena},
+  author       = {Garcia-Foncillas Macias, Lorena and
+                  Kujawa, Aaron and
+                  Shapey, Jonathan and
+                  Vercauteren, Tom},
   title        = {Slicer Annotation Workflow},
   year         = {2026},
   version      = {1.0.0},
+  publisher    = {Zenodo},
   doi          = {10.5281/zenodo.21312379},
   url          = {https://doi.org/10.5281/zenodo.21312379},
   license      = {Apache-2.0}
