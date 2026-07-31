@@ -1,17 +1,33 @@
 cff-version: 1.2.0
-title: Slicer Annotation Workflow
-message: "If you use this software, please cite it as below."
+message: "If you use this software, please cite it using the metadata from this file."
+title: "Slicer Annotation Workflow"
+abstract: >-
+  A 3D Slicer-based annotation workflow for localising findings in brain MRI
+  scans based on radiology reports. Annotators create point, ROI, and line
+  markups to identify lesions and other findings described in reports.
 type: software
 authors:
   - given-names: Lorena
-    family-names: Garcia-Foncillas Macias
+    family-names: "Garcia-Foncillas Macias"
+    affiliation: "King's College London"
     email: lorena.garcia-foncillas_macias@kcl.ac.uk
-    affiliation: King's College London
+  - given-names: Aaron
+    family-names: Kujawa
+    affiliation: "King's College London"
+    orcid: "https://orcid.org/0000-0002-1445-6207"
+  - given-names: Jonathan
+    family-names: Shapey
+    affiliation: "King's College London"
+    orcid: "https://orcid.org/0000-0003-0291-348X"
+  - given-names: Tom
+    family-names: Vercauteren
+    affiliation: "King's College London"
+    orcid: "https://orcid.org/0000-0003-1794-0456"
 repository-code: "https://github.com/cai4cai/slicer-annotation-workflow"
 license: Apache-2.0
-version: "1.0.0"
+version: 1.0.0
 date-released: "2026-07-11"
-doi: "10.5281/zenodo.21312379"
+doi: 10.5281/zenodo.21312379
 keywords:
   - medical imaging
   - annotation
@@ -19,8 +35,3 @@ keywords:
   - radiology
   - NIfTI
   - meningioma
-abstract: >-
-  A 3D Slicer-based annotation workflow for localising findings
-  in brain MRI scans based on radiology reports. Annotators create
-  point, ROI, and line markups to identify lesions and other
-  findings described in reports.
